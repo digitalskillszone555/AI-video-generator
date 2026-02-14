@@ -15,47 +15,47 @@ const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, user, onLogout
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   return (
-    <header className="bg-black/90 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-50">
+    <header className="bg-black/95 backdrop-blur-3xl border-b border-white/10 sticky top-0 z-50">
       <div className="max-w-[1600px] mx-auto px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-5 cursor-pointer group" onClick={() => setActiveTab('identify')}>
           <Logo size={44} />
           <div>
-            <span className="text-2xl font-bold text-white font-serif tracking-tight leading-none block group-hover:text-emerald-400 transition-colors">Veridion</span>
-            <span className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-[0.4em] mt-0.5">Professional Botanical Studio</span>
+            <span className="text-2xl font-bold text-white font-serif tracking-tight leading-none block group-hover:text-emerald-400 transition-colors">OMNI-CREATOR</span>
+            <span className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-[0.4em] mt-0.5">APEX-UNLIMITED ENGINE</span>
           </div>
         </div>
 
-        <nav className="hidden xl:flex bg-white/[0.03] border border-white/10 rounded-2xl p-1 gap-1">
-          <TabButton active={activeTab === 'identify'} onClick={() => setActiveTab('identify')} icon={<ScanIcon />} label="Analysis & Edit" />
-          <TabButton active={activeTab === 'chat'} onClick={() => setActiveTab('chat')} icon={<ChatIcon />} label="Sage Assistant" />
-          <TabButton active={activeTab === 'todo'} onClick={() => setActiveTab('todo')} icon={<TodoIcon />} label="Task Command" />
-          <TabButton active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<VideoIcon />} label="Studio Hub" />
-          {user.isAdmin && <TabButton active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} icon={<AdminIcon />} label="Admin" />}
+        <nav className="hidden xl:flex bg-white/[0.03] border border-white/10 rounded-2xl p-1 gap-1 glass shadow-2xl">
+          <TabButton active={activeTab === 'identify'} onClick={() => setActiveTab('identify')} icon={<ScanIcon />} label="Synthesis" />
+          <TabButton active={activeTab === 'chat'} onClick={() => setActiveTab('chat')} icon={<ChatIcon />} label="Omni-Assistant" />
+          <TabButton active={activeTab === 'todo'} onClick={() => setActiveTab('todo')} icon={<TodoIcon />} label="Command Log" />
+          <TabButton active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<VideoIcon />} label="Apex Hub" />
+          {user.isAdmin && <TabButton active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} icon={<AdminIcon />} label="Engine Core" />}
         </nav>
 
         <div className="relative">
           <button 
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="flex items-center gap-3 p-1.5 pr-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all border border-white/5"
+            className="flex items-center gap-3 p-1.5 pr-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all border border-white/10 glass shadow-xl"
           >
             <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-xs font-bold uppercase shadow-lg shadow-emerald-500/30">
               {user.email[0]}
             </div>
             <div className="hidden lg:block text-left">
-              <div className="text-[9px] font-bold text-stone-500 uppercase tracking-widest leading-none mb-0.5">{user.isAdmin ? 'Lead Admin' : 'Creative Director'}</div>
+              <div className="text-[9px] font-bold text-stone-500 uppercase tracking-widest leading-none mb-0.5">Apex Operator</div>
               <div className="text-xs font-bold text-white truncate max-w-[140px]">{user.email.split('@')[0]}</div>
             </div>
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 mt-3 w-64 bg-[#0a0a0a] rounded-[2rem] shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 p-2 animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute right-0 mt-3 w-64 bg-[#0a0a0a]/95 backdrop-blur-3xl rounded-[2rem] shadow-[0_30px_60px_rgba(0,0,0,0.9)] border border-white/10 p-2 animate-in fade-in zoom-in-95 duration-200">
               <div className="px-5 py-4 mb-2 border-b border-white/5">
-                <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1">Session Protocol</p>
+                <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1">Session Node</p>
                 <p className="text-sm font-bold text-white truncate">{user.email}</p>
               </div>
               <button onClick={onLogout} className="w-full text-left px-5 py-3.5 text-sm font-bold text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-3">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                Deactivate Session
+                Terminate Session
               </button>
             </div>
           )}

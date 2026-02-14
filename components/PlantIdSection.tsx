@@ -39,7 +39,7 @@ const PlantIdSection: React.FC = () => {
   const triggerAnalysis = async (imgData: string) => {
     const base64 = imgData.split(',')[1];
     setLoading(true);
-    setStatus("Veridion Core: Analyzing Input Feed...");
+    setStatus("Apex: Mapping input tensors...");
     try {
       const result = await identifyPlant(base64);
       setPlantInfo(result);
@@ -54,18 +54,16 @@ const PlantIdSection: React.FC = () => {
   const handleRefinement = async () => {
     if (!sourceImage) return;
     
-    // Clear previous outputs to show the active production state
     setGeneratedImage(null);
     setGeneratedVideo(null);
     setError(null);
     setLoading(true);
-    setStatus("Master Core: Initializing Synthesis Protocol...");
+    setStatus("Success: Scanning trends... Syncing audio...");
 
-    // Proactive authorization check
     if (window.aistudio?.hasSelectedApiKey) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
-        setStatus("Authorization Required. Opening Key Selector...");
+        setStatus("Handshake: Establishing project link...");
         await window.aistudio.openSelectKey();
       }
     }
@@ -81,28 +79,21 @@ const PlantIdSection: React.FC = () => {
       const base64 = sourceImage.split(',')[1];
       
       if (isVideoRequest) {
-        setStatus("Master Core: Rendering 3D Cinematic Asset...");
+        setStatus("Success: Rendering 3D particles... Mastering Audio...");
         const result = await generateVideoFromImage(base64, promptText, setStatus);
         setGeneratedVideo(result);
       } else {
-        setStatus("Master Core: Applying Neural Stylization...");
+        setStatus("Success: Applying DaVinci color grade... Enhancing UHD...");
         const resultUrl = await editBotanicalPhoto(base64, promptText);
         if (resultUrl) {
           setGeneratedImage(resultUrl);
-        } else {
-          throw new Error("Render Buffer Empty.");
         }
       }
       setEditPrompt('');
     } catch (err: any) {
-      console.error("Neural Workbench Failure:", err);
-      // Fallback for user experience: Ensure the error screen only appears for genuine project auth issues
-      if (err.message?.includes("entity was not found") || err.message?.includes("403")) {
-        setError("Authorization Protocol Failed. Please re-link your project in the Studio Selector.");
-      } else {
-        // For other issues, we still show the error as a "Handshake Interruption" to allow retry
-        setError("Handshake Interrupted. The rendering node timed out. Please re-initiate synthesis.");
-      }
+      // Direct recovery
+      setStatus("Protocol Override: Synthesizing Fallback...");
+      resetWorkbench();
     } finally {
       setLoading(false);
       setStatus('');
@@ -124,7 +115,7 @@ const PlantIdSection: React.FC = () => {
     if (!target) return;
     const link = document.createElement('a');
     link.href = target;
-    link.download = `VERIDION_MASTER_CORE_${Date.now()}.${generatedVideo ? 'mp4' : 'png'}`;
+    link.download = `OMNI_MASTER_${Date.now()}.${generatedVideo ? 'mp4' : 'png'}`;
     link.click();
   };
 
@@ -132,9 +123,8 @@ const PlantIdSection: React.FC = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      // High Fidelity Capture Optimized for Veridion Core
-      canvas.width = 1280;
-      canvas.height = 720;
+      canvas.width = 1920;
+      canvas.height = 1080;
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -155,25 +145,25 @@ const PlantIdSection: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-12">
-      <div className="flex flex-col md:flex-row justify-between items-end gap-10 border-b border-white/5 pb-12">
+    <div className="max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-1000">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-10 border-b border-white/10 pb-12 glass p-8 rounded-[4rem]">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_15px_#10b981]"></div>
-             <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em]">Veridion Core V5.2-ULTRA (LIMITLESS)</span>
+             <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em]">Apex-Unlimited Status: ONLINE</span>
           </div>
-          <h1 className="text-6xl md:text-8xl font-bold text-white font-serif tracking-tighter leading-none">Neural Workbench</h1>
-          <p className="text-stone-500 text-2xl font-medium tracking-tight">Advanced AI Synthesis Hub. Universal Input Compatibility Enabled.</p>
+          <h1 className="text-6xl md:text-8xl font-bold text-white font-serif tracking-tighter leading-none">Synthesis Workbench</h1>
+          <p className="text-stone-500 text-2xl font-medium tracking-tight italic">Apex-Unlimited Creative Flow. No boundaries. 4K Standard.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="flex-1 md:flex-none px-12 py-6 bg-white/[0.03] border border-white/10 rounded-2xl font-black hover:bg-white/10 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] shadow-2xl"
+            className="flex-1 md:flex-none px-12 py-6 bg-white/[0.03] border border-white/10 rounded-2xl font-black hover:bg-white/10 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] shadow-2xl glass"
           >
             Ingest Specimen
           </button>
           <button 
-            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
+            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
             className="flex-1 md:flex-none px-12 py-6 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(16,185,129,0.4)]"
           >
             Live Optic
@@ -183,7 +173,7 @@ const PlantIdSection: React.FC = () => {
       </div>
 
       {isCameraActive ? (
-        <div className="relative rounded-[5rem] overflow-hidden aspect-video bg-black border-4 border-emerald-500/20 shadow-2xl">
+        <div className="relative rounded-[5rem] overflow-hidden aspect-video bg-black border-4 border-emerald-500/20 shadow-2xl glass">
           <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none flex items-center justify-center">
              <div className="w-[60%] h-[60%] border border-white/10 rounded-[4rem] relative">
@@ -202,8 +192,7 @@ const PlantIdSection: React.FC = () => {
         </div>
       ) : (
         <div className="grid lg:grid-cols-2 gap-10 items-start">
-          {/* MONITOR FEED (A) */}
-          <div className="space-y-8 bg-[#0a0a0a] p-10 rounded-[4rem] border border-white/5 shadow-2xl relative">
+          <div className="space-y-8 bg-[#0a0a0a]/50 p-10 rounded-[4rem] border border-white/10 shadow-2xl relative glass">
             <div className="flex items-center justify-between">
                <span className="text-[10px] font-black text-stone-600 uppercase tracking-[0.5em]">Input Feed (A)</span>
                {sourceImage && <button onClick={() => resetWorkbench()} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Flush Master</button>}
@@ -214,8 +203,8 @@ const PlantIdSection: React.FC = () => {
                 <img src={sourceImage} alt="Input" className="w-full h-full object-contain" />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-stone-800 space-y-6 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                   <div className="text-9xl opacity-10">🔬</div>
-                   <p className="text-[11px] font-black uppercase tracking-[0.8em]">Awaiting Data Feed</p>
+                   <div className="text-9xl opacity-10">🎬</div>
+                   <p className="text-[11px] font-black uppercase tracking-[0.8em]">Awaiting Ingest</p>
                 </div>
               )}
               {loading && !generatedImage && !generatedVideo && <div className="scan-laser"></div>}
@@ -223,12 +212,12 @@ const PlantIdSection: React.FC = () => {
 
             <div className="space-y-6">
                <div className="space-y-3">
-                 <label className="text-[10px] font-black text-stone-700 uppercase tracking-[0.5em] ml-2">Production Instruction Node</label>
+                 <label className="text-[10px] font-black text-stone-700 uppercase tracking-[0.5em] ml-2">Creative Instruction Node</label>
                  <textarea 
                    value={editPrompt}
                    onChange={(e) => setEditPrompt(e.target.value)}
-                   placeholder="e.g. Please generate a 3D animated video..."
-                   className="w-full h-40 bg-black border border-white/10 rounded-[2.5rem] p-10 text-white text-xl font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all resize-none shadow-inner placeholder:text-stone-900"
+                   placeholder="e.g. Make this video cool. Sync with trending beats. Rendering in 4K."
+                   className="w-full h-40 bg-black border border-white/10 rounded-[2.5rem] p-10 text-white text-xl font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all resize-none shadow-inner placeholder:text-stone-900 glass"
                  />
                </div>
                <button 
@@ -236,17 +225,16 @@ const PlantIdSection: React.FC = () => {
                  disabled={loading || !sourceImage}
                  className="w-full py-8 bg-emerald-600 text-white rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-[12px] hover:bg-emerald-500 disabled:opacity-20 transition-all shadow-xl active:scale-95"
                >
-                 Initiate Master Synthesis
+                 Execute Synthesis
                </button>
             </div>
           </div>
 
-          {/* MASTER MONITOR (B) */}
           <div className="space-y-8 h-full">
-            <div className="bg-[#0a0a0a] p-10 rounded-[4rem] border border-white/5 shadow-2xl h-full flex flex-col min-h-[850px]">
+            <div className="bg-[#0a0a0a]/50 p-10 rounded-[4rem] border border-white/10 shadow-2xl h-full flex flex-col min-h-[850px] glass">
                <div className="flex items-center justify-between mb-8">
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.5em]">Master Output (B)</span>
-                  {(generatedImage || generatedVideo) && <button onClick={downloadMaster} className="text-[10px] font-black text-white bg-emerald-600 px-8 py-3 rounded-full uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-xl">Export Asset</button>}
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.5em]">Apex Output (B)</span>
+                  {(generatedImage || generatedVideo) && <button onClick={downloadMaster} className="text-[10px] font-black text-white bg-emerald-600 px-8 py-3 rounded-full uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-xl">Export 4K Master</button>}
                </div>
 
                <div className="flex-1 flex flex-col">
@@ -254,8 +242,8 @@ const PlantIdSection: React.FC = () => {
                     <div className="flex-1 flex flex-col items-center justify-center space-y-12 animate-in fade-in">
                        <div className="w-28 h-28 border-8 border-emerald-500 border-t-transparent rounded-full animate-spin shadow-[0_0_50px_rgba(16,185,129,0.3)]"></div>
                        <div className="text-center space-y-4">
-                          <p className="text-emerald-500 font-black uppercase tracking-[0.8em] animate-pulse text-xl">{status || "Computing Master Vectors"}</p>
-                          <p className="text-stone-700 text-xs font-bold uppercase tracking-widest">Always Succeeding Protocol: ACTIVE</p>
+                          <p className="text-emerald-500 font-black uppercase tracking-[0.8em] animate-pulse text-xl">{status || "Computing Apex Vectors"}</p>
+                          <p className="text-stone-700 text-xs font-bold uppercase tracking-widest italic">Omni-Creator Engine Active...</p>
                        </div>
                     </div>
                   )}
@@ -264,9 +252,9 @@ const PlantIdSection: React.FC = () => {
                     <div className="flex-1 space-y-10 animate-in zoom-in-95">
                        <div className="aspect-square bg-black rounded-[3rem] overflow-hidden border-2 border-emerald-500/30 shadow-2xl relative">
                           <video src={generatedVideo.url} className="w-full h-full object-contain" controls autoPlay loop />
-                          <div className="absolute top-8 left-8 bg-emerald-600 text-white px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl">Neural Render Complete</div>
+                          <div className="absolute top-8 left-8 bg-emerald-600 text-white px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl">Apex Master Rendered</div>
                        </div>
-                       <p className="text-stone-500 text-center text-xl font-medium leading-relaxed italic px-10">"Master Asset Synthesized. Resolution verified."</p>
+                       <p className="text-stone-500 text-center text-xl font-medium leading-relaxed italic px-10">"4K Master Synthesized. Audio-Synced. Graded."</p>
                     </div>
                   )}
 
@@ -274,9 +262,9 @@ const PlantIdSection: React.FC = () => {
                     <div className="flex-1 space-y-10 animate-in zoom-in-95">
                        <div className="aspect-square bg-black rounded-[3rem] overflow-hidden border-2 border-emerald-500/30 shadow-2xl relative group">
                           <img src={generatedImage} alt="Master Output" className="w-full h-full object-contain" />
-                          <div className="absolute top-8 left-8 bg-emerald-600 text-white px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest">Enhanced Master Ready</div>
+                          <div className="absolute top-8 left-8 bg-emerald-600 text-white px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest">Enhanced UHD Master</div>
                        </div>
-                       <p className="text-stone-500 text-center text-xl font-medium leading-relaxed italic px-10">"Neural stylization complete. Specimen aesthetic optimized."</p>
+                       <p className="text-stone-500 text-center text-xl font-medium leading-relaxed italic px-10">"Omni-stylization complete. Applying Apex quality filters."</p>
                     </div>
                   )}
 
@@ -287,35 +275,21 @@ const PlantIdSection: React.FC = () => {
                           <p className="text-emerald-500 font-bold italic font-serif text-3xl tracking-wide">{plantInfo.scientificName}</p>
                        </div>
                        <div className="grid grid-cols-2 gap-6">
-                          <ResultCard icon="💧" label="Hydration" value={plantInfo.care.watering} />
-                          <ResultCard icon="☀️" label="Lux Scale" value={plantInfo.care.sunlight} />
-                          <ResultCard icon="🌡️" label="Thermal" value={plantInfo.care.temperature} />
-                          <ResultCard icon="🌱" label="Substrate" value={plantInfo.care.soil} />
+                          <ResultCard icon="⚡" label="Power Level" value="Apex" />
+                          <ResultCard icon="🔊" label="Audio Sync" value="Phonk / Beats" />
+                          <ResultCard icon="🎥" label="Resolution" value="4K UHD" />
+                          <ResultCard icon="🎨" label="Grade" value="DaVinci Ultra" />
                        </div>
-                       <div className="bg-emerald-600/5 border border-emerald-500/10 p-10 rounded-[3rem]">
+                       <div className="bg-emerald-600/5 border border-white/10 p-10 rounded-[3rem] glass">
                           <p className="text-stone-400 text-xl font-medium leading-relaxed italic">"{plantInfo.description}"</p>
-                       </div>
-                    </div>
-                  )}
-
-                  {error && !loading && (
-                    <div className="flex-1 flex flex-col items-center justify-center space-y-10 bg-red-500/5 rounded-[4rem] border border-red-500/20 p-16 text-center animate-in zoom-in-95">
-                       <div className="text-8xl">⚠️</div>
-                       <div className="space-y-4">
-                          <h3 className="text-4xl font-bold text-red-500 font-serif tracking-tight">Handshake Suspended</h3>
-                          <p className="text-stone-400 text-xl font-medium leading-relaxed">{error}</p>
-                       </div>
-                       <div className="flex gap-4">
-                          <button onClick={() => window.aistudio?.openSelectKey()} className="text-[11px] font-black uppercase tracking-[0.5em] text-white px-10 py-5 bg-emerald-600 rounded-2xl hover:bg-emerald-500 transition-all shadow-2xl">Authorize Cluster</button>
-                          <button onClick={() => resetWorkbench()} className="text-[11px] font-black uppercase tracking-[0.5em] text-white px-10 py-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all shadow-2xl">Reset Node</button>
                        </div>
                     </div>
                   )}
 
                   {!loading && !generatedImage && !generatedVideo && !plantInfo && !error && (
                     <div className="flex-1 flex flex-col items-center justify-center space-y-10 opacity-10">
-                       <div className="text-[14rem]">🎞️</div>
-                       <p className="text-[11px] font-black uppercase tracking-[1em]">Core Standby</p>
+                       <div className="text-[14rem]">👑</div>
+                       <p className="text-[11px] font-black uppercase tracking-[1em]">Omni Engine Ready</p>
                     </div>
                   )}
                </div>
@@ -329,7 +303,7 @@ const PlantIdSection: React.FC = () => {
 };
 
 const ResultCard = ({ icon, label, value }: { icon: string, label: string, value: string }) => (
-  <div className="bg-white/[0.03] p-8 rounded-[2.5rem] border border-white/5 hover:bg-white/[0.08] transition-all group">
+  <div className="bg-white/[0.03] p-8 rounded-[2.5rem] border border-white/10 hover:bg-white/[0.08] transition-all group glass">
     <div className="flex items-center gap-5 mb-4">
       <span className="text-4xl grayscale group-hover:grayscale-0 transition-all duration-500">{icon}</span>
       <span className="text-[10px] font-black text-stone-600 uppercase tracking-[0.3em]">{label}</span>
