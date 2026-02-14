@@ -5,6 +5,7 @@ import { PlantCareInfo, VideoGenerationResult, ProductionSettings } from "../typ
 const MODEL_IDENTIFY = 'gemini-3-flash-preview'; 
 const MODEL_VIDEO = 'veo-3.1-generate-preview';
 const MODEL_VIDEO_FAST = 'veo-3.1-fast-generate-preview';
+const MODEL_IMAGE_EDIT = 'gemini-2.5-flash-image';
 
 export const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -62,6 +63,31 @@ export const generateGardeningVideo = async (
   };
 };
 
+export const editBotanicalPhoto = async (
+  base64Image: string,
+  editPrompt: string
+): Promise<string> => {
+  const ai = getGeminiClient();
+  const response = await ai.models.generateContent({
+    model: MODEL_IMAGE_EDIT,
+    contents: {
+      parts: [
+        { inlineData: { data: base64Image, mimeType: 'image/jpeg' } },
+        { text: `Perform a professional edit based on this instruction: ${editPrompt}. Maintain botanical accuracy.` }
+      ]
+    }
+  });
+
+  let imageUrl = "";
+  for (const part of response.candidates[0].content.parts) {
+    if (part.inlineData) {
+      imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+      break;
+    }
+  }
+  return imageUrl;
+};
+
 export const extendExistingVideo = async (
   previousResult: VideoGenerationResult,
   newPrompt: string,
@@ -72,17 +98,17 @@ export const extendExistingVideo = async (
 
   let operation = await ai.models.generateVideos({
     model: MODEL_VIDEO,
-    prompt: `Continuing the scene: ${newPrompt}. Maintain consistent lighting, color, and subject from the previous clip.`,
+    prompt: `Edit/Extend: ${newPrompt}. Maintain consistency with previous master clip.`,
     video: previousResult.rawVideo,
     config: {
       numberOfVideos: 1,
-      resolution: '720p', // Extensions are currently optimized at 720p
+      resolution: '720p',
       aspectRatio: previousResult.aspectRatio,
     }
   });
 
   while (!operation.done) {
-    onProgress("Synthesizing Additional 7s Motion...");
+    onProgress("Synthesizing Neural Edits...");
     await new Promise(resolve => setTimeout(resolve, 8000));
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
@@ -109,7 +135,7 @@ export const identifyPlant = async (base64Image: string): Promise<PlantCareInfo 
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-        { text: "Analyze botanical specimen. If NOT a plant, set isBotanical to false. Otherwise provide care instructions." }
+        { text: "Analyze botanical specimen. If NOT a plant (e.g. text, person, computer screen), set isBotanical to false. Otherwise provide care instructions." }
       ],
     },
     config: {
@@ -139,15 +165,14 @@ export const identifyPlant = async (base64Image: string): Promise<PlantCareInfo 
   return JSON.parse(response.text || '{}');
 };
 
-// Fixed: Added chatWithBotanist to handle professional horticultural Q&A
 export const chatWithBotanist = async (message: string, history: any[]): Promise<string> => {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
     contents: [...history, { role: 'user', parts: [{ text: message }] }],
     config: {
-      systemInstruction: "You are Sage, the Lead Botanical Intelligence at Veridion Studio. You are a world-class expert in horticulture, plant pathology, and landscape design. Provide detailed, professional, and actionable advice with a sophisticated, helpful tone.",
+      systemInstruction: "You are Sage, the Lead Botanical Intelligence at Veridion Studio. Provide professional, actionable horticultural advice.",
     }
   });
-  return response.text || "I apologize, but I'm having trouble processing your request at the moment. Please try again.";
+  return response.text || "I apologize, but I'm having trouble processing your request. Please try again.";
 };

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { identifyPlant } from '../services/geminiService';
+import { identifyPlant, editBotanicalPhoto } from '../services/geminiService';
 import { PlantCareInfo } from '../types';
 
 const PlantIdSection: React.FC = () => {
@@ -10,6 +10,8 @@ const PlantIdSection: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isNonBotanical, setIsNonBotanical] = useState(false);
+  const [editPrompt, setEditPrompt] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -17,7 +19,7 @@ const PlantIdSection: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    if (image && !plantInfo && !loading) {
+    if (image && !plantInfo && !loading && !isEditing) {
       triggerAnalysis(image);
     }
   }, [image]);
@@ -51,9 +53,26 @@ const PlantIdSection: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setError("AI Analysis Interrupted. Ensure your Specimen is clearly visible and organic.");
+      setError("AI Analysis Core Exception. Ensure you are uploading an organic specimen.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditPhoto = async () => {
+    if (!image || !editPrompt) return;
+    setIsEditing(true);
+    setLoading(true);
+    try {
+      const base64 = image.split(',')[1];
+      const editedUrl = await editBotanicalPhoto(base64, editPrompt);
+      if (editedUrl) setImage(editedUrl);
+      setEditPrompt('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setIsEditing(false);
     }
   };
 
@@ -107,7 +126,7 @@ const PlantIdSection: React.FC = () => {
             className="flex-1 md:flex-none px-10 py-5 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-widest shadow-[0_15px_40px_rgba(16,185,129,0.3)]"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
-            Live Lens Hub
+            Live Lens
           </button>
           <input type="file" ref={fileInputRef} onChange={handleFile} accept="image/*" className="hidden" />
         </div>
@@ -116,12 +135,9 @@ const PlantIdSection: React.FC = () => {
       {isCameraActive ? (
         <div className="relative rounded-[4rem] overflow-hidden aspect-video bg-black border-4 border-emerald-500/20 shadow-2xl">
           <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
              <div className="w-[70%] h-[70%] border border-white/20 rounded-[2rem] relative">
-                <div className="absolute inset-0 bg-emerald-500/5 animate-pulse"></div>
                 <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-emerald-500 rounded-tl-3xl"></div>
-                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-emerald-500 rounded-tr-3xl"></div>
-                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-emerald-500 rounded-bl-3xl"></div>
                 <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-emerald-500 rounded-br-3xl"></div>
              </div>
           </div>
@@ -138,28 +154,52 @@ const PlantIdSection: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-20 items-start">
           <div className="space-y-8">
             {image ? (
-              <div className="rounded-[4rem] overflow-hidden bg-[#080808] border border-white/10 shadow-2xl aspect-square relative group">
-                <img src={image} alt="Specimen" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                {loading && <div className="scan-laser"></div>}
-                {loading && (
-                  <div className="absolute inset-0 bg-black/70 backdrop-blur-xl flex flex-col items-center justify-center z-30">
-                    <div className="w-20 h-20 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-10"></div>
-                    <p className="text-emerald-500 font-bold text-[11px] uppercase tracking-[0.6em] animate-pulse">Decoding Specimen Signal</p>
+              <div className="space-y-6">
+                <div className="rounded-[4rem] overflow-hidden bg-[#080808] border border-white/10 shadow-2xl aspect-square relative group">
+                  <img src={image} alt="Specimen" className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-110" />
+                  {loading && <div className="scan-laser"></div>}
+                  {loading && (
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-xl flex flex-col items-center justify-center z-30">
+                      <div className="w-20 h-20 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-10"></div>
+                      <p className="text-emerald-500 font-bold text-[11px] uppercase tracking-[0.6em] animate-pulse">
+                        {isEditing ? "Synthesizing Neural Edit" : "Decoding Specimen Signal"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 space-y-4">
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-2">Photo Editor / Prompt Edit</label>
+                  <div className="flex gap-4">
+                    <input 
+                      type="text"
+                      value={editPrompt}
+                      onChange={(e) => setEditPrompt(e.target.value)}
+                      placeholder="e.g. Add cinematic studio lighting..."
+                      className="flex-1 bg-black border border-white/10 rounded-xl px-6 py-4 text-white text-sm"
+                    />
+                    <button 
+                      onClick={handleEditPhoto}
+                      disabled={loading || !editPrompt}
+                      className="px-8 bg-emerald-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-emerald-500 disabled:opacity-20 transition-all"
+                    >
+                      Apply Edit
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <div className="aspect-square border-4 border-dashed border-white/5 rounded-[5rem] flex flex-col items-center justify-center space-y-10 text-stone-900 group hover:border-emerald-500/20 transition-all cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="text-9xl opacity-10 group-hover:scale-110 transition-transform group-hover:opacity-30">🔬</div>
                 <div className="text-center space-y-4">
                   <p className="text-4xl font-serif text-stone-600 font-bold tracking-tight">Ready for Ingestion</p>
-                  <p className="text-[11px] uppercase tracking-[0.6em] font-bold opacity-30">Studio Node 01-B Nominal</p>
+                  <p className="text-[11px] uppercase tracking-[0.6em] font-bold opacity-30">Studio Node Nominal</p>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col justify-center min-h-[500px] py-10">
+          <div className="flex flex-col justify-center min-h-[500px]">
             {plantInfo && !loading && (
               <div className="space-y-12 animate-in fade-in slide-in-from-right-10 duration-1000">
                 <div className="space-y-6">
@@ -184,17 +224,24 @@ const PlantIdSection: React.FC = () => {
                   <CareCard icon="🌡️" label="Thermal" value={plantInfo.care.temperature} />
                   <CareCard icon="🌱" label="Substrate" value={plantInfo.care.soil} />
                 </div>
+
+                <div className="pt-10">
+                   <button onClick={() => {setImage(null); setPlantInfo(null);}} className="text-stone-600 font-bold uppercase tracking-widest text-[10px] hover:text-white transition-all flex items-center gap-3">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                      Analyze Different Specimen
+                   </button>
+                </div>
               </div>
             )}
 
             {isNonBotanical && !loading && (
               <div className="bg-amber-500/5 border-2 border-amber-500/20 p-16 rounded-[4rem] space-y-10 animate-in zoom-in-95 duration-700 text-center">
-                <div className="w-24 h-24 bg-amber-500/20 rounded-[2rem] flex items-center justify-center text-5xl mx-auto shadow-2xl">🚫</div>
-                <div className="space-y-4">
-                  <h3 className="text-3xl font-bold text-amber-400 font-serif">Signature Mismatch</h3>
-                  <p className="text-stone-400 text-xl leading-relaxed font-medium">Neural sensors indicate this is a non-botanical entity. The analysis core is optimized for organic plant life only.</p>
+                <div className="w-24 h-24 bg-amber-500/20 rounded-[2rem] flex items-center justify-center text-5xl mx-auto">🚫</div>
+                <div className="space-y-4 text-center">
+                  <h3 className="text-3xl font-bold text-amber-400 font-serif">Incompatible Signature</h3>
+                  <p className="text-stone-400 text-xl font-medium">Neural sensors identified a non-organic or non-botanical entity. The core analysis unit is strictly optimized for plant life only.</p>
                 </div>
-                <button onClick={() => {setImage(null); setIsNonBotanical(false);}} className="text-[11px] font-black uppercase text-amber-500 hover:text-white transition-all tracking-[0.5em] px-12 py-5 border border-amber-500/20 rounded-2xl bg-amber-500/10">Re-Initialize Core</button>
+                <button onClick={() => {setImage(null); setIsNonBotanical(false);}} className="px-12 py-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-500 font-black uppercase tracking-widest text-[11px] hover:bg-amber-500 hover:text-white transition-all">Restart Core</button>
               </div>
             )}
 
@@ -202,7 +249,7 @@ const PlantIdSection: React.FC = () => {
               <div className="bg-red-500/5 border-2 border-red-500/20 p-16 rounded-[4rem] space-y-10 text-center animate-in zoom-in-95 duration-700">
                 <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center text-5xl mx-auto shadow-2xl">⚠️</div>
                 <div className="space-y-4">
-                  <h3 className="text-3xl font-bold text-red-400 font-serif">Protocol Exception</h3>
+                  <h3 className="text-3xl font-bold text-red-400 font-serif">Neural Conflict</h3>
                   <p className="text-stone-400 text-xl font-medium">{error}</p>
                 </div>
                 <button onClick={() => {setError(null); setImage(null);}} className="text-[11px] font-black uppercase text-white hover:bg-emerald-600 transition-all tracking-[0.5em] px-12 py-5 border border-white/10 rounded-2xl bg-white/5 shadow-2xl">Restart Handshake</button>
