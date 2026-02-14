@@ -49,7 +49,7 @@ const PlantIdSection: React.FC = () => {
         setPlantInfo(result);
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("Analysis Error:", err);
     } finally {
       setLoading(false);
       setStatus('');
@@ -63,6 +63,7 @@ const PlantIdSection: React.FC = () => {
     setError(null);
     setGeneratedImage(null);
     setGeneratedVideo(null);
+    setStatus("Initializing production cluster...");
 
     const isVideoRequest = editPrompt.toLowerCase().includes('video') || 
                            editPrompt.toLowerCase().includes('animated') ||
@@ -84,9 +85,13 @@ const PlantIdSection: React.FC = () => {
         }
       }
       setEditPrompt('');
-    } catch (err) {
-      console.error(err);
-      setError("Neural Conflict. Ensure your prompt is descriptive and specimen is clearly visible.");
+    } catch (err: any) {
+      console.error("Neural Error:", err);
+      if (err.message?.includes("entity was not found")) {
+        setError("Account Linkage Error. Please select your project again to authorize the rendering cluster.");
+      } else {
+        setError("Neural Conflict. Ensure your prompt is descriptive and the specimen is clearly visible in the input feed.");
+      }
     } finally {
       setLoading(false);
       setStatus('');
@@ -106,13 +111,13 @@ const PlantIdSection: React.FC = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      // 4K Internal Buffer
-      canvas.width = 3840;
-      canvas.height = 2160;
+      // Optimizing to 1080p for reliable AI payload delivery
+      canvas.width = 1920;
+      canvas.height = 1080;
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.98);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         setSourceImage(dataUrl);
         setGeneratedImage(null);
         setGeneratedVideo(null);
@@ -137,7 +142,7 @@ const PlantIdSection: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_15px_#10b981]"></div>
-             <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em]">Neural Mastering Engine V4.8-PRO</span>
+             <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em]">Neural Mastering Engine V4.9-PRO</span>
           </div>
           <h1 className="text-6xl md:text-8xl font-bold text-white font-serif tracking-tighter leading-none">Neural Workbench</h1>
           <p className="text-stone-500 text-2xl font-medium tracking-tight">AI Cinematic Rendering and Technical Botanical Forensics.</p>
@@ -150,7 +155,7 @@ const PlantIdSection: React.FC = () => {
             Ingest Specimen
           </button>
           <button 
-            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: { width: 3840, height: 2160 } }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
+            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
             className="flex-1 md:flex-none px-12 py-6 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(16,185,129,0.4)]"
           >
             Live Optic

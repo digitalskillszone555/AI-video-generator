@@ -22,6 +22,7 @@ const VideoSection: React.FC = () => {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [clips, setClips] = useState<VideoGenerationResult[]>([]);
   const [activeClip, setActiveClip] = useState<VideoGenerationResult | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -45,6 +46,7 @@ const VideoSection: React.FC = () => {
   const handleAuthorize = async () => {
     if (window.aistudio?.openSelectKey) {
       await window.aistudio.openSelectKey();
+      // As per guidelines, assume success after triggering the dialog
       setIsAuthorized(true);
     } else {
       setIsAuthorized(true);
@@ -52,17 +54,25 @@ const VideoSection: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || isProcessing) return;
+    
     setIsProcessing(true);
+    setError(null);
     setStatus("Booting Cinema Compute...");
+    
     try {
       const res = await generateGardeningVideo(prompt, settings, setStatus);
       setClips(prev => [res, ...prev]);
       setActiveClip(res);
       setWorkspaceMode('edit');
-    } catch (err) {
-      console.error(err);
-      setStatus("Neural Node Error. Please re-authorize.");
+    } catch (err: any) {
+      console.error("Hub Production Error:", err);
+      if (err.message?.includes("entity was not found")) {
+        setError("Account missing. Please authorize the project using the button above.");
+        await window.aistudio?.openSelectKey();
+      } else {
+        setError("Neural Hub Error. The rendering cluster is currently over capacity. Please re-initiate in a moment.");
+      }
     } finally {
       setIsProcessing(false);
       setStatus('');
@@ -70,17 +80,20 @@ const VideoSection: React.FC = () => {
   };
 
   const handleEdit = async () => {
-    if (!activeClip || !editPrompt.trim()) return;
+    if (!activeClip || !editPrompt.trim() || isProcessing) return;
+    
     setIsProcessing(true);
+    setError(null);
     setStatus("Rendering Master Refinement...");
+    
     try {
       const res = await extendExistingVideo(activeClip, editPrompt, setStatus);
       setClips(prev => [res, ...prev]);
       setActiveClip(res);
       setEditPrompt('');
-    } catch (err) {
-      console.error(err);
-      setStatus("Edit cluster failure.");
+    } catch (err: any) {
+      console.error("Hub Edit Error:", err);
+      setError("Temporal synthesis failed. Try a simpler refinement prompt.");
     } finally {
       setIsProcessing(false);
       setStatus('');
@@ -155,6 +168,13 @@ const VideoSection: React.FC = () => {
           <div className="aspect-video bg-black relative flex items-center justify-center">
             {activeClip ? (
               <video ref={videoRef} src={activeClip.url} className="w-full h-full object-contain" controls autoPlay loop />
+            ) : error ? (
+              <div className="text-center space-y-8 p-20">
+                <div className="text-8xl">⚠️</div>
+                <h4 className="text-3xl font-bold text-red-500 font-serif">Production Halted</h4>
+                <p className="text-stone-500 text-xl max-w-lg mx-auto">{error}</p>
+                <button onClick={() => {setError(null); setWorkspaceMode('create');}} className="px-12 py-5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest">Reset Render Node</button>
+              </div>
             ) : (
               <div className="text-center space-y-12 animate-pulse">
                 <div className="w-48 h-48 bg-white/[0.03] rounded-[4rem] flex items-center justify-center text-8xl border border-white/10 mx-auto shadow-inner">🎬</div>
