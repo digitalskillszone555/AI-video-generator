@@ -3,16 +3,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { generateGardeningVideo, extendExistingVideo } from '../services/geminiService';
 import { VideoGenerationResult, ProductionSettings, CinematicProfile } from '../types';
 
-const FX_PROFILES: {id: CinematicProfile, name: string, desc: string}[] = [
-  { id: 'standard', name: 'Clean Natural', desc: 'Rec.709 standard broadcast look.' },
-  { id: 'log-c', name: 'Arri Vantage', desc: 'Log-C color space for pro grading.' },
-  { id: 'raw', name: '8K Digital RAW', desc: 'Maximum detail, filmic grain.' },
-  { id: 'hdr', name: 'Cinematic HDR', desc: 'High dynamic range, vibrant peaks.' }
+const FX_SUITE: {id: CinematicProfile, name: string, icon: string}[] = [
+  { id: 'hdr', name: 'Ultra HDR', icon: '✨' },
+  { id: 'log-c', name: 'Arri Log-C', icon: '🎥' },
+  { id: 'raw', name: '35mm Film', icon: '🎞️' },
+  { id: 'standard', name: 'Natural', icon: '🌿' }
 ];
 
 const VideoSection: React.FC = () => {
   const [prompt, setPrompt] = useState('');
-  const [refinementPrompt, setRefinementPrompt] = useState('');
+  const [editPrompt, setEditPrompt] = useState('');
   const [settings, setSettings] = useState<ProductionSettings>({
     profile: 'hdr',
     framerate: 24,
@@ -20,12 +20,12 @@ const VideoSection: React.FC = () => {
     aspectRatio: '16:9'
   });
   
-  const [generating, setGenerating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState('');
-  const [timeline, setTimeline] = useState<VideoGenerationResult[]>([]);
-  const [selectedClip, setSelectedClip] = useState<VideoGenerationResult | null>(null);
+  const [clips, setClips] = useState<VideoGenerationResult[]>([]);
+  const [activeClip, setActiveClip] = useState<VideoGenerationResult | null>(null);
   const [hasKey, setHasKey] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
+  const [workspaceMode, setWorkspaceMode] = useState<'create' | 'edit'>('create');
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -33,50 +33,42 @@ const VideoSection: React.FC = () => {
     window.aistudio.hasSelectedApiKey().then(setHasKey);
   }, []);
 
-  const handleOpenKey = async () => {
-    await window.aistudio.openSelectKey();
-    setHasKey(true);
-  };
-
-  const handleGenerate = async () => {
+  const handleCreate = async () => {
     if (!prompt.trim()) return;
-    setGenerating(true);
+    setIsProcessing(true);
     try {
-      const result = await generateGardeningVideo(prompt, settings, setStatus);
-      setTimeline(prev => [result, ...prev]);
-      setSelectedClip(result);
-      setShowEditor(true);
+      const res = await generateGardeningVideo(prompt, settings, setStatus);
+      setClips(prev => [res, ...prev]);
+      setActiveClip(res);
+      setWorkspaceMode('edit');
     } catch (err) {
-      console.error(err);
-      setStatus("Production Failed. Re-check API.");
+      setStatus("Neural Conflict Detected. Re-check API Key.");
     } finally {
-      setGenerating(false);
+      setIsProcessing(false);
       setStatus('');
     }
   };
 
-  const handleRefine = async () => {
-    if (!selectedClip || !refinementPrompt.trim()) return;
-    setGenerating(true);
-    setStatus("Neural Re-Rendering Master...");
+  const handleEdit = async () => {
+    if (!activeClip || !editPrompt.trim()) return;
+    setIsProcessing(true);
+    setStatus("Neural Re-Mapping for Correction...");
     try {
-      // Use extension logic to simulate "editing" the clip with new instructions
-      const result = await extendExistingVideo(selectedClip, refinementPrompt, setStatus);
-      setTimeline(prev => [result, ...prev]);
-      setSelectedClip(result);
-      setRefinementPrompt('');
+      const res = await extendExistingVideo(activeClip, editPrompt, setStatus);
+      setClips(prev => [res, ...prev]);
+      setActiveClip(res);
+      setEditPrompt('');
     } catch (err) {
       console.error(err);
     } finally {
-      setGenerating(false);
-      setStatus('');
+      setIsProcessing(false);
     }
   };
 
-  const downloadClip = (clip: VideoGenerationResult) => {
+  const exportMaster = (clip: VideoGenerationResult) => {
     const link = document.createElement('a');
     link.href = clip.url;
-    link.download = `Veridion_Creative_Master_${clip.id}.mp4`;
+    link.download = `VERIDION_MASTER_${clip.id.toUpperCase()}.mp4`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -84,164 +76,161 @@ const VideoSection: React.FC = () => {
 
   if (!hasKey) {
     return (
-      <div className="max-w-3xl mx-auto py-32 text-center space-y-12 animate-in zoom-in-95 duration-700">
-        <div className="w-32 h-32 bg-emerald-600 rounded-[2.5rem] flex items-center justify-center mx-auto text-white text-5xl shadow-[0_0_80px_rgba(5,150,105,0.3)] animate-pulse">🎬</div>
+      <div className="max-w-xl mx-auto py-24 px-6 text-center space-y-10 animate-in fade-in zoom-in-95 duration-700">
+        <div className="w-24 h-24 bg-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto text-4xl shadow-2xl shadow-emerald-500/20">🎬</div>
         <div className="space-y-4">
-          <h2 className="text-5xl font-bold font-serif">Creative Suite Locked</h2>
-          <p className="text-stone-500 text-xl max-w-lg mx-auto">Connect your professional Studio Key to access the Veo 3.1 Neural Production & Editing suite.</p>
+          <h2 className="text-4xl font-bold font-serif">Pro Studio Gateway</h2>
+          <p className="text-stone-500 text-lg leading-relaxed">The Creative Suite requires a verified Studio Key for 4K Neural Production.</p>
         </div>
-        <button onClick={handleOpenKey} className="px-12 py-5 bg-white text-black rounded-2xl font-bold text-lg hover:bg-stone-200 transition-all shadow-2xl tracking-widest uppercase">Connect Neural Node</button>
+        <button onClick={() => window.aistudio.openSelectKey().then(() => setHasKey(true))} className="w-full bg-white text-black py-5 rounded-2xl font-bold uppercase tracking-widest text-sm hover:bg-stone-200 transition-all">Authorize Node</button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto grid lg:grid-cols-12 gap-8 animate-in fade-in duration-1000">
+    <div className="max-w-[1500px] mx-auto grid lg:grid-cols-12 gap-8 animate-in fade-in duration-1000">
       
-      {/* Sidebar: FX & Timeline */}
-      <div className="lg:col-span-3 space-y-8 h-[calc(100vh-12rem)] overflow-y-auto pr-4">
+      {/* FX & Timeline Sidebar */}
+      <div className="lg:col-span-3 order-2 lg:order-1 space-y-8">
         <div className="space-y-4">
-          <h3 className="text-[10px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Creative FX Profiles</h3>
-          <div className="grid gap-3">
-            {FX_PROFILES.map(fx => (
+          <h3 className="text-[10px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Neural FX Engine</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {FX_SUITE.map(fx => (
               <button 
-                key={fx.id} 
+                key={fx.id}
                 onClick={() => setSettings({...settings, profile: fx.id})}
-                className={`w-full text-left p-5 rounded-[2rem] border transition-all ${settings.profile === fx.id ? 'bg-emerald-600/10 border-emerald-500' : 'bg-white/[0.02] border-white/5 hover:border-white/10'}`}
+                className={`flex flex-col items-center gap-3 p-4 rounded-3xl border transition-all ${settings.profile === fx.id ? 'bg-emerald-600/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'bg-white/[0.02] border-white/5 hover:border-white/10'}`}
               >
-                <div className="font-bold text-sm text-white mb-1">{fx.name}</div>
-                <p className="text-[10px] text-stone-500">{fx.desc}</p>
+                <span className="text-2xl">{fx.icon}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest">{fx.name}</span>
               </button>
             ))}
           </div>
         </div>
 
         <div className="space-y-4 pt-8 border-t border-white/5">
-          <h3 className="text-[10px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Master Render History</h3>
-          <div className="grid gap-4">
-            {timeline.map(clip => (
+          <h3 className="text-[10px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Production Timeline</h3>
+          <div className="flex lg:flex-col gap-4 overflow-x-auto lg:overflow-x-hidden pb-4">
+            {clips.map(clip => (
               <div 
-                key={clip.id} 
-                onClick={() => { setSelectedClip(clip); setShowEditor(true); }}
-                className={`group relative rounded-3xl overflow-hidden aspect-video border-2 cursor-pointer transition-all ${selectedClip?.id === clip.id ? 'border-emerald-500 shadow-2xl scale-[1.02]' : 'border-white/5 opacity-50 grayscale hover:grayscale-0 hover:opacity-100'}`}
+                key={clip.id}
+                onClick={() => { setActiveClip(clip); setWorkspaceMode('edit'); }}
+                className={`relative flex-shrink-0 w-48 lg:w-full aspect-video rounded-3xl overflow-hidden border-2 cursor-pointer transition-all ${activeClip?.id === clip.id ? 'border-emerald-500 shadow-2xl scale-[1.02]' : 'border-white/5 opacity-40 hover:opacity-100'}`}
               >
                 <video src={clip.url} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent p-4 flex flex-col justify-end">
-                  <div className="text-[8px] font-bold text-white uppercase tracking-widest">Master {clip.id.slice(0,4)}</div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex flex-col justify-end">
+                  <span className="text-[8px] font-bold text-white uppercase tracking-widest">Master {clip.id.slice(0,4)}</span>
                 </div>
               </div>
             ))}
-            {timeline.length === 0 && (
-              <div className="py-20 border border-dashed border-white/10 rounded-[2rem] text-center text-[10px] font-bold text-stone-800 uppercase tracking-widest">No Active Renders</div>
+            {clips.length === 0 && (
+              <div className="py-12 border border-dashed border-white/5 rounded-3xl text-center text-[10px] font-bold text-stone-800 uppercase tracking-widest">Awaiting First Capture</div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Main Suite */}
-      <div className="lg:col-span-9 space-y-8">
-        <div className="bg-[#080808] rounded-[4rem] border border-white/5 overflow-hidden shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
-          {/* Main Monitor */}
-          <div className="aspect-video bg-black relative group overflow-hidden">
-            {selectedClip ? (
+      {/* Main Production Monitor */}
+      <div className="lg:col-span-9 order-1 lg:order-2 space-y-8">
+        <div className="bg-[#080808] rounded-[3.5rem] border border-white/5 overflow-hidden shadow-2xl">
+          <div className="aspect-video bg-black relative group">
+            {activeClip ? (
               <video 
                 ref={videoRef}
-                src={selectedClip.url} 
-                className="w-full h-full object-contain" 
-                controls 
+                src={activeClip.url}
+                className="w-full h-full object-contain"
+                controls
                 autoPlay
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center space-y-6">
-                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center text-4xl border border-white/5">📽️</div>
+                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-3xl border border-white/5">📽️</div>
                 <div className="text-center space-y-2">
-                   <p className="text-stone-600 font-bold uppercase tracking-[0.5em] text-[11px]">Ready for Production</p>
-                   <p className="text-[10px] text-stone-800 uppercase tracking-widest">Veo 3.1 Neural Cluster 04 Online</p>
+                   <p className="text-stone-500 font-bold uppercase tracking-[0.4em] text-[10px]">Veridion Creative Workspace</p>
+                   <p className="text-[9px] text-stone-800 uppercase tracking-widest">Cluster Node: Active • Status: Awaiting Signal</p>
                 </div>
               </div>
             )}
 
-            {generating && (
-              <div className="absolute inset-0 bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center">
-                 <div className="w-20 h-20 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-8"></div>
+            {isProcessing && (
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-2xl z-50 flex flex-col items-center justify-center">
+                 <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-8"></div>
                  <div className="text-center space-y-3">
-                    <p className="text-emerald-500 font-bold uppercase tracking-[0.4em] animate-pulse text-sm">{status || "Rendering Frames"}</p>
+                    <p className="text-emerald-500 font-bold uppercase tracking-[0.4em] animate-pulse text-xs">{status || "Neural Rendering Master"}</p>
                     <div className="w-64 h-1 bg-white/5 rounded-full overflow-hidden">
-                       <div className="h-full bg-emerald-500 animate-[loading_10s_ease-in-out_infinite]" style={{width: '30%'}}></div>
+                       <div className="h-full bg-emerald-500 animate-[loading_10s_ease-in-out_infinite]" style={{width: '45%'}}></div>
                     </div>
                  </div>
               </div>
             )}
           </div>
 
-          {/* Suite Controls */}
-          <div className="p-10 lg:p-14 space-y-12">
-            {!showEditor ? (
-              <div className="flex flex-col gap-8">
-                <div className="space-y-4">
-                  <label className="text-[10px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Initial Scene Script</label>
+          <div className="p-8 lg:p-12">
+            {workspaceMode === 'create' ? (
+              <div className="space-y-8">
+                <div className="space-y-3">
+                  <label className="text-[9px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Cinematic Production Script</label>
                   <textarea 
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe the cinematic botanical scene in detail..."
-                    className="w-full h-40 bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-10 text-white text-2xl font-serif focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all resize-none placeholder:text-stone-900 leading-tight"
+                    placeholder="Describe your scene (e.g., A macro close-up of a cactus flower blooming in the desert morning mist...)"
+                    className="w-full h-40 bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 text-white text-xl font-serif focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all resize-none placeholder:text-stone-900"
                   />
                 </div>
                 <button 
-                  onClick={handleGenerate}
-                  disabled={generating || !prompt.trim()}
-                  className="w-full py-8 bg-emerald-600 text-white rounded-[2.5rem] font-bold text-xl hover:bg-emerald-500 transition-all shadow-2xl shadow-emerald-950/50 flex items-center justify-center gap-6 group disabled:opacity-20"
+                  onClick={handleCreate}
+                  disabled={isProcessing || !prompt.trim()}
+                  className="w-full py-7 bg-emerald-600 text-white rounded-[2rem] font-bold text-lg hover:bg-emerald-500 transition-all shadow-2xl flex items-center justify-center gap-4 group disabled:opacity-20"
                 >
-                  <span className="uppercase tracking-[0.2em] text-sm">Initialize Master Production</span>
-                  <svg className="w-6 h-6 group-hover:translate-x-2 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  <span className="uppercase tracking-widest text-xs">Initialize Master Build</span>
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                 </button>
               </div>
             ) : (
-              <div className="space-y-12 animate-in slide-in-from-bottom-8">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white/5 p-8 rounded-[3rem] border border-white/5">
-                  <div className="flex items-center gap-6">
-                    <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-2xl">✨</div>
+              <div className="space-y-10 animate-in slide-in-from-bottom-6 duration-700">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white/[0.03] p-8 rounded-[2.5rem] border border-white/5">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-2xl shadow-2xl">🏆</div>
                     <div>
-                       <h4 className="text-xl font-bold text-white font-serif tracking-tight">Master Render Completed</h4>
+                       <h4 className="text-xl font-bold text-white font-serif tracking-tight">Production Ready</h4>
                        <p className="text-[10px] text-stone-500 uppercase tracking-[0.2em] font-bold">Profile: {settings.profile} • {settings.resolution}</p>
                     </div>
                   </div>
                   <div className="flex gap-4 w-full md:w-auto">
                     <button 
-                      onClick={() => selectedClip && downloadClip(selectedClip)}
-                      className="flex-1 md:flex-none px-10 py-5 bg-white text-black rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-stone-200 transition-all flex items-center justify-center gap-3 shadow-2xl"
+                      onClick={() => activeClip && exportMaster(activeClip)}
+                      className="flex-1 md:flex-none px-10 py-5 bg-white text-black rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-stone-200 transition-all shadow-2xl"
                     >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                      Export Master 4K
+                      Export Master MP4
                     </button>
                     <button 
-                      onClick={() => setShowEditor(false)}
-                      className="p-5 bg-white/5 border border-white/10 rounded-2xl text-stone-400 hover:text-white transition-all"
+                      onClick={() => setWorkspaceMode('create')}
+                      className="px-6 bg-white/5 border border-white/10 rounded-2xl text-stone-400 hover:text-white transition-all"
                     >
-                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-6">
-                  <label className="text-[10px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Neural Edit / Refinement Prompt</label>
-                  <div className="flex gap-4">
+                  <label className="text-[9px] font-bold text-stone-600 uppercase tracking-[0.4em] ml-2">Neural Edit / Correction Prompt</label>
+                  <div className="flex gap-3">
                     <input 
                       type="text"
-                      value={refinementPrompt}
-                      onChange={(e) => setRefinementPrompt(e.target.value)}
-                      placeholder="Instruction: Make the mist thicker / Zoom into the flower..."
-                      className="flex-1 bg-white/[0.03] border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-stone-800 font-medium"
+                      value={editPrompt}
+                      onChange={(e) => setEditPrompt(e.target.value)}
+                      placeholder="e.g., Make it darker, add more film grain, zoom into the leaves..."
+                      className="flex-1 bg-white/[0.03] border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-stone-800"
                     />
                     <button 
-                      onClick={handleRefine}
-                      disabled={generating || !refinementPrompt.trim()}
-                      className="px-10 bg-emerald-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-emerald-500 transition-all shadow-xl disabled:opacity-20"
+                      onClick={handleEdit}
+                      disabled={isProcessing || !editPrompt.trim()}
+                      className="px-8 bg-emerald-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[9px] hover:bg-emerald-500 transition-all shadow-xl disabled:opacity-20"
                     >
-                      Update Master
+                      Update Clip
                     </button>
                   </div>
-                  <p className="text-[10px] text-stone-700 uppercase tracking-widest text-center">Refinement uses high-fidelity frame-consistent editing logic.</p>
+                  <p className="text-[9px] text-stone-700 uppercase tracking-widest text-center">Refinement utilizes frame-consistent neural editing technology.</p>
                 </div>
               </div>
             )}

@@ -3,8 +3,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Veridion Studio - Professional Botanical AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Veridion Studio | Professional Botanical Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;700&display=swap" rel="stylesheet">
     <style>
@@ -15,37 +15,39 @@
         }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #020202;
+            background-color: #000000;
             color: #ffffff;
             margin: 0;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
         .font-serif {
             font-family: 'Fraunces', serif;
         }
         .glass {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(10, 10, 10, 0.7);
             backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .emerald-glow {
-            box-shadow: 0 0 40px rgba(16, 185, 129, 0.15);
+            box-shadow: 0 0 50px rgba(16, 185, 129, 0.1);
         }
-        @keyframes scan-horizontal {
-            0% { left: -100%; }
-            100% { left: 100%; }
+        @keyframes scan-vertical {
+            0% { top: -10%; }
+            100% { top: 110%; }
         }
-        .scan-line {
+        .scan-laser {
             position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: linear-gradient(to bottom, transparent, #10b981, transparent);
-            box-shadow: 0 0 15px #10b981;
-            animation: scan-horizontal 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #10b981, transparent);
+            box-shadow: 0 0 20px #10b981;
+            z-index: 20;
+            animation: scan-vertical 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
         ::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
         }
         ::-webkit-scrollbar-track {
             background: #000000;
