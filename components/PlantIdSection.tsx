@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { identifyPlant, editBotanicalPhoto } from '../services/geminiService';
 import { PlantCareInfo } from '../types';
@@ -19,7 +18,7 @@ const PlantIdSection: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    if (image && !plantInfo && !loading && !isEditing) {
+    if (image && !plantInfo && !loading && !isEditing && !isNonBotanical) {
       triggerAnalysis(image);
     }
   }, [image]);
@@ -53,7 +52,7 @@ const PlantIdSection: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setError("AI Analysis Core Exception. Ensure you are uploading an organic specimen.");
+      setError("AI Analysis Core Exception. Botanical signature not found.");
     } finally {
       setLoading(false);
     }
@@ -66,14 +65,29 @@ const PlantIdSection: React.FC = () => {
     try {
       const base64 = image.split(',')[1];
       const editedUrl = await editBotanicalPhoto(base64, editPrompt);
-      if (editedUrl) setImage(editedUrl);
+      if (editedUrl) {
+        setImage(editedUrl);
+        // If we edited it, we might want to re-analyze, or just show the edit. 
+        // Let's just show the edit for now as the user requested "editing properly".
+        setPlantInfo(null); 
+        setIsNonBotanical(false);
+      }
       setEditPrompt('');
     } catch (err) {
       console.error(err);
+      setError("Neural editing failed. Please check your instructions.");
     } finally {
       setLoading(false);
       setIsEditing(false);
     }
+  };
+
+  const downloadResult = () => {
+    if (!image) return;
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `VERIDION_EDIT_${Date.now()}.png`;
+    link.click();
   };
 
   const capture = () => {
@@ -103,15 +117,15 @@ const PlantIdSection: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-12 pb-24 animate-in fade-in duration-1000">
+    <div className="max-w-[1400px] mx-auto space-y-12 pb-24">
       <div className="flex flex-col md:flex-row justify-between items-end gap-8 border-b border-white/5 pb-10">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
-             <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.5em]">Neural Analysis Core V4</span>
+             <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.5em]">Neural Analysis Core V4.2</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold text-white font-serif tracking-tight leading-none">Specimen Indexing</h1>
-          <p className="text-stone-500 text-xl font-medium">Professional botanical telemetry and health diagnostics.</p>
+          <h1 className="text-5xl md:text-7xl font-bold text-white font-serif tracking-tight leading-none">Specimen Suite</h1>
+          <p className="text-stone-500 text-xl font-medium">Professional botanical telemetry and high-fidelity editing.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
@@ -119,7 +133,7 @@ const PlantIdSection: React.FC = () => {
             className="flex-1 md:flex-none px-10 py-5 bg-white/5 border border-white/10 rounded-2xl font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-widest"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            Ingest Specimen
+            Ingest Image
           </button>
           <button 
             onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: true }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
@@ -154,46 +168,48 @@ const PlantIdSection: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-20 items-start">
           <div className="space-y-8">
             {image ? (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-700">
                 <div className="rounded-[4rem] overflow-hidden bg-[#080808] border border-white/10 shadow-2xl aspect-square relative group">
                   <img src={image} alt="Specimen" className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-110" />
                   {loading && <div className="scan-laser"></div>}
                   {loading && (
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-xl flex flex-col items-center justify-center z-30">
                       <div className="w-20 h-20 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-10"></div>
-                      <p className="text-emerald-500 font-bold text-[11px] uppercase tracking-[0.6em] animate-pulse">
-                        {isEditing ? "Synthesizing Neural Edit" : "Decoding Specimen Signal"}
+                      <p className="text-emerald-500 font-bold text-[11px] uppercase tracking-[0.6em] animate-pulse text-center px-10">
+                        {isEditing ? "Neural Editing Engine Active" : "Decoding Organic Signature"}
                       </p>
                     </div>
                   )}
+                  <button onClick={downloadResult} className="absolute top-8 right-8 p-4 bg-black/50 backdrop-blur-xl border border-white/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600 hover:text-white">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  </button>
                 </div>
 
-                <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 space-y-4">
-                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-2">Photo Editor / Prompt Edit</label>
-                  <div className="flex gap-4">
-                    <input 
-                      type="text"
+                <div className="bg-[#0a0a0a] p-10 rounded-[3rem] border border-white/5 space-y-6 shadow-2xl">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-stone-600 uppercase tracking-widest ml-2">Neural Refinement Prompt</label>
+                    <textarea 
                       value={editPrompt}
                       onChange={(e) => setEditPrompt(e.target.value)}
-                      placeholder="e.g. Add cinematic studio lighting..."
-                      className="flex-1 bg-black border border-white/10 rounded-xl px-6 py-4 text-white text-sm"
+                      placeholder="E.g. Transform this plant into a 3D animated style, add professional studio lighting..."
+                      className="w-full h-32 bg-black border border-white/10 rounded-2xl px-6 py-5 text-white text-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all resize-none shadow-inner"
                     />
-                    <button 
-                      onClick={handleEditPhoto}
-                      disabled={loading || !editPrompt}
-                      className="px-8 bg-emerald-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-emerald-500 disabled:opacity-20 transition-all"
-                    >
-                      Apply Edit
-                    </button>
                   </div>
+                  <button 
+                    onClick={handleEditPhoto}
+                    disabled={loading || !editPrompt.trim()}
+                    className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[11px] hover:bg-emerald-500 disabled:opacity-20 transition-all shadow-xl active:scale-95"
+                  >
+                    Apply Neural Edit
+                  </button>
                 </div>
               </div>
             ) : (
               <div className="aspect-square border-4 border-dashed border-white/5 rounded-[5rem] flex flex-col items-center justify-center space-y-10 text-stone-900 group hover:border-emerald-500/20 transition-all cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="text-9xl opacity-10 group-hover:scale-110 transition-transform group-hover:opacity-30">🔬</div>
                 <div className="text-center space-y-4">
-                  <p className="text-4xl font-serif text-stone-600 font-bold tracking-tight">Ready for Ingestion</p>
-                  <p className="text-[11px] uppercase tracking-[0.6em] font-bold opacity-30">Studio Node Nominal</p>
+                  <p className="text-4xl font-serif text-stone-600 font-bold tracking-tight">Ingestion Point</p>
+                  <p className="text-[11px] uppercase tracking-[0.6em] font-bold opacity-30">Studio Ready</p>
                 </div>
               </div>
             )}
@@ -206,8 +222,8 @@ const PlantIdSection: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-6">
                     <h2 className="text-6xl font-bold text-white font-serif tracking-tight leading-tight">{plantInfo.name}</h2>
                     <span className={`px-8 py-3 rounded-full text-[11px] font-extrabold uppercase tracking-[0.3em] border ${
-                      plantInfo.care.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                      plantInfo.care.difficulty === 'Moderate' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                      plantInfo.care.difficulty.toLowerCase().includes('easy') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      plantInfo.care.difficulty.toLowerCase().includes('moderate') ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
                       'bg-red-500/10 text-red-400 border-red-500/30'
                     }`}>
                       {plantInfo.care.difficulty} Protocol
@@ -224,35 +240,34 @@ const PlantIdSection: React.FC = () => {
                   <CareCard icon="🌡️" label="Thermal" value={plantInfo.care.temperature} />
                   <CareCard icon="🌱" label="Substrate" value={plantInfo.care.soil} />
                 </div>
-
-                <div className="pt-10">
-                   <button onClick={() => {setImage(null); setPlantInfo(null);}} className="text-stone-600 font-bold uppercase tracking-widest text-[10px] hover:text-white transition-all flex items-center gap-3">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                      Analyze Different Specimen
-                   </button>
-                </div>
               </div>
             )}
 
-            {isNonBotanical && !loading && (
-              <div className="bg-amber-500/5 border-2 border-amber-500/20 p-16 rounded-[4rem] space-y-10 animate-in zoom-in-95 duration-700 text-center">
-                <div className="w-24 h-24 bg-amber-500/20 rounded-[2rem] flex items-center justify-center text-5xl mx-auto">🚫</div>
+            {isNonBotanical && !loading && !isEditing && (
+              <div className="bg-[#0a0a0a] border border-white/5 p-16 rounded-[4rem] space-y-10 animate-in zoom-in-95 duration-700 text-center shadow-2xl">
+                <div className="w-24 h-24 bg-amber-500/20 rounded-[2rem] flex items-center justify-center text-5xl mx-auto shadow-inner">⚠️</div>
                 <div className="space-y-4 text-center">
-                  <h3 className="text-3xl font-bold text-amber-400 font-serif">Incompatible Signature</h3>
-                  <p className="text-stone-400 text-xl font-medium">Neural sensors identified a non-organic or non-botanical entity. The core analysis unit is strictly optimized for plant life only.</p>
+                  <h3 className="text-3xl font-bold text-amber-400 font-serif">Signature Mismatch</h3>
+                  <p className="text-stone-500 text-xl font-medium leading-relaxed">The Neural Engine identified a non-botanical entity. You can still use the <b>Neural Refinement</b> tool on the left to edit this image into a plant or any creative style.</p>
                 </div>
-                <button onClick={() => {setImage(null); setIsNonBotanical(false);}} className="px-12 py-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-500 font-black uppercase tracking-widest text-[11px] hover:bg-amber-500 hover:text-white transition-all">Restart Core</button>
               </div>
             )}
 
             {error && !loading && (
-              <div className="bg-red-500/5 border-2 border-red-500/20 p-16 rounded-[4rem] space-y-10 text-center animate-in zoom-in-95 duration-700">
+              <div className="bg-red-500/5 border border-red-500/20 p-16 rounded-[4rem] space-y-10 text-center animate-in zoom-in-95 duration-700">
                 <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center text-5xl mx-auto shadow-2xl">⚠️</div>
                 <div className="space-y-4">
-                  <h3 className="text-3xl font-bold text-red-400 font-serif">Neural Conflict</h3>
-                  <p className="text-stone-400 text-xl font-medium">{error}</p>
+                  <h3 className="text-3xl font-bold text-red-400 font-serif leading-none">Neural Conflict</h3>
+                  <p className="text-stone-400 text-xl font-medium leading-relaxed">{error}</p>
                 </div>
-                <button onClick={() => {setError(null); setImage(null);}} className="text-[11px] font-black uppercase text-white hover:bg-emerald-600 transition-all tracking-[0.5em] px-12 py-5 border border-white/10 rounded-2xl bg-white/5 shadow-2xl">Restart Handshake</button>
+                <button onClick={() => {setError(null); setImage(null);}} className="text-[11px] font-black uppercase text-white hover:bg-emerald-600 transition-all tracking-[0.5em] px-12 py-5 border border-white/10 rounded-2xl bg-white/5 shadow-2xl">Restart Cluster</button>
+              </div>
+            )}
+
+            {!loading && !plantInfo && !isNonBotanical && !error && !image && (
+              <div className="text-center space-y-6 opacity-20">
+                <div className="text-9xl">🌿</div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.6em]">Awaiting Botanical Telemetry</p>
               </div>
             )}
           </div>
