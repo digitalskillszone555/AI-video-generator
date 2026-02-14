@@ -20,10 +20,13 @@ export interface ChatMessage {
 }
 
 export interface VideoGenerationResult {
+  id: string;
   url: string;
   rawVideo: any;
   aspectRatio: '16:9' | '9:16';
   resolution: '720p' | '1080p';
+  prompt: string;
+  timestamp: number;
 }
 
 export interface VideoTemplate {
@@ -34,6 +37,15 @@ export interface VideoTemplate {
   previewEmoji: string;
 }
 
+export type CinematicProfile = 'standard' | 'log-c' | 'raw' | 'hdr';
+
+export interface ProductionSettings {
+  profile: CinematicProfile;
+  framerate: 24 | 30 | 60;
+  resolution: '720p' | '1080p';
+  aspectRatio: '16:9' | '9:16';
+}
+
 export interface GardenTask {
   id: string;
   text: string;
@@ -41,28 +53,10 @@ export interface GardenTask {
   createdAt: number;
 }
 
-export type TransitionType = 'none' | 'fade' | 'blur';
-
-export interface VideoClip {
-  id: string;
-  url: string;
-  name: string;
-  duration: number;
-  startTime: number;
-  endTime: number;
-  transition: TransitionType;
-}
-
-export interface BackgroundAudio {
-  id: string;
-  url: string;
-  name: string;
-  category: string;
-}
-
+// Added WeatherData interface to support the Climate Intelligence section
 export interface WeatherData {
   temp: number;
-  condition: 'Sunny' | 'Cloudy' | 'Rainy' | 'Windy' | 'Stormy';
+  condition: string;
   humidity: number;
   uvIndex: number;
   location: string;
