@@ -84,6 +84,14 @@ const VideoSection: React.FC = () => {
     }
   }, [videoResult]);
 
+  // Fix: Property 'volume' does not exist on audio element in JSX.
+  // Using useEffect to set volume on the DOM element instead to ensure reactivity to slider changes.
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = bgVolume;
+    }
+  }, [bgVolume]);
+
   const handleOpenKey = async () => {
     await window.aistudio.openSelectKey();
     setHasKey(true);
@@ -128,7 +136,8 @@ const VideoSection: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-700">
-      <audio ref={audioRef} src={selectedAudio?.url} loop volume={bgVolume} />
+      {/* Fix: removed non-existent volume prop, volume is now handled via useEffect */}
+      <audio ref={audioRef} src={selectedAudio?.url} loop />
       
       <div className="flex flex-col md:flex-row justify-between items-end gap-6">
         <div className="space-y-2">
