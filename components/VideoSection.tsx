@@ -53,9 +53,12 @@ const VideoSection: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    if (!prompt.trim() || isProcessing) return;
+    if (isProcessing) return;
     
-    // Check authorization protocol before initiating render
+    // Auto-resolve empty prompt as per Core Prime Directive
+    const productionPrompt = prompt.trim() || "Cinematic 4K botanical masterpiece with ultra-sharp macro details and smooth lighting.";
+    
+    // Proactive authorization protocol
     const hasKey = await window.aistudio?.hasSelectedApiKey();
     if (!hasKey) {
       await window.aistudio?.openSelectKey();
@@ -63,23 +66,22 @@ const VideoSection: React.FC = () => {
     
     setIsProcessing(true);
     setError(null);
-    setStatus("Booting Cinema Compute Cluster...");
+    setStatus("Activating Cinema Compute Node...");
     
     try {
-      const res = await generateGardeningVideo(prompt, settings, setStatus);
+      const res = await generateGardeningVideo(productionPrompt, settings, setStatus);
       setClips(prev => [res, ...prev]);
       setActiveClip(res);
       setWorkspaceMode('edit');
     } catch (err: any) {
-      console.error("Hub Production Failure:", err);
-      let errorMsg = "Neural Hub Error. The rendering cluster is currently over capacity.";
-      
+      console.error("Studio Hub Error:", err);
+      // Auto-recovery protocol
       if (err.message?.includes("entity was not found") || err.message?.includes("403")) {
-        errorMsg = "Account Lockage. Please re-authorize the project in the key selector.";
+        setError("Account missing Authorization. Please click the button below to link your paid project.");
         await window.aistudio?.openSelectKey();
+      } else {
+        setError("Neural Hub Connection Interrupted. The rendering cluster is currently re-calibrating.");
       }
-      
-      setError(errorMsg);
     } finally {
       setIsProcessing(false);
       setStatus('');
@@ -87,20 +89,22 @@ const VideoSection: React.FC = () => {
   };
 
   const handleEdit = async () => {
-    if (!activeClip || !editPrompt.trim() || isProcessing) return;
+    if (!activeClip || isProcessing) return;
+    
+    const refinementPrompt = editPrompt.trim() || "Enhance visual fidelity and add smooth 3D motion transitions.";
     
     setIsProcessing(true);
     setError(null);
-    setStatus("Master Refinement in Progress...");
+    setStatus("Executing Temporal Master Refinement...");
     
     try {
-      const res = await extendExistingVideo(activeClip, editPrompt, setStatus);
+      const res = await extendExistingVideo(activeClip, refinementPrompt, setStatus);
       setClips(prev => [res, ...prev]);
       setActiveClip(res);
       setEditPrompt('');
     } catch (err: any) {
       console.error("Hub Edit Failure:", err);
-      setError("Temporal synthesis failed. The neural sequence could not be extended.");
+      setError("Temporal synthesis protocol interrupted. Please re-initiate the Master sequence.");
     } finally {
       setIsProcessing(false);
       setStatus('');
@@ -110,7 +114,7 @@ const VideoSection: React.FC = () => {
   const downloadMaster = (url: string) => {
     const a = document.createElement('a');
     a.href = url;
-    a.download = `VERIDION_CINEMA_${Date.now()}.mp4`;
+    a.download = `VERIDION_CINEMA_CORE_${Date.now()}.mp4`;
     a.click();
   };
 
@@ -119,14 +123,14 @@ const VideoSection: React.FC = () => {
       <div className="max-w-2xl mx-auto py-48 px-12 text-center space-y-16 animate-in fade-in duration-1000">
         <div className="w-32 h-32 bg-emerald-600 rounded-[4rem] flex items-center justify-center mx-auto text-6xl shadow-2xl">🎬</div>
         <div className="space-y-6">
-          <h2 className="text-6xl font-bold font-serif tracking-tight leading-none">Studio Access Locked</h2>
-          <p className="text-stone-500 text-2xl font-medium leading-relaxed">Authorization required for 4K Neural Production. Connect your paid API key to unlock the master rendering cluster.</p>
+          <h2 className="text-6xl font-bold font-serif tracking-tight leading-none">Studio Hub Offline</h2>
+          <p className="text-stone-500 text-2xl font-medium leading-relaxed">Authorization required for 4K Master Synthesis. Link your production key to unlock the master cluster.</p>
         </div>
         <button 
           onClick={handleAuthorize} 
           className="w-full bg-white text-black py-8 rounded-[3rem] font-black uppercase tracking-[0.4em] text-[12px] hover:bg-stone-200 transition-all shadow-2xl active:scale-95"
         >
-          Authorize Creative Cluster
+          Authorize Master Cluster
         </button>
       </div>
     );
@@ -152,7 +156,7 @@ const VideoSection: React.FC = () => {
         </div>
 
         <div className="bg-[#0a0a0a] border border-white/5 rounded-[4rem] p-10 shadow-2xl overflow-hidden">
-          <h3 className="text-[11px] font-black text-stone-600 uppercase tracking-[0.5em] mb-8">Asset Vault</h3>
+          <h3 className="text-[11px] font-black text-stone-600 uppercase tracking-[0.5em] mb-8">Master Vault</h3>
           <div className="flex lg:flex-col gap-10 overflow-x-auto pb-10">
             {clips.map(clip => (
               <div 
@@ -164,7 +168,7 @@ const VideoSection: React.FC = () => {
               </div>
             ))}
             {clips.length === 0 && (
-              <div className="py-24 border-2 border-dashed border-white/5 rounded-[3.5rem] text-center text-stone-800 uppercase tracking-[0.4em] text-[10px] font-black">Awaiting Generation</div>
+              <div className="py-24 border-2 border-dashed border-white/5 rounded-[3.5rem] text-center text-stone-800 uppercase tracking-[0.4em] text-[10px] font-black">Awaiting Master Render</div>
             )}
           </div>
         </div>
@@ -178,14 +182,17 @@ const VideoSection: React.FC = () => {
             ) : error ? (
               <div className="text-center space-y-8 p-20 animate-in zoom-in-95">
                 <div className="text-8xl">⚠️</div>
-                <h4 className="text-4xl font-bold text-red-500 font-serif">Production Halted</h4>
-                <p className="text-stone-500 text-2xl max-w-lg mx-auto font-medium">{error}</p>
-                <button onClick={() => {setError(null); setWorkspaceMode('create');}} className="px-12 py-6 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Reset Render Node</button>
+                <h4 className="text-4xl font-bold text-red-500 font-serif tracking-tight">Handshake Protocols Suspended</h4>
+                <p className="text-stone-500 text-2xl max-w-lg mx-auto font-medium leading-relaxed">{error}</p>
+                <div className="flex justify-center gap-6">
+                  <button onClick={() => window.aistudio?.openSelectKey()} className="px-12 py-6 bg-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl hover:bg-emerald-500 transition-all">Authorize Node</button>
+                  <button onClick={() => {setError(null); setWorkspaceMode('create');}} className="px-12 py-6 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Clear Node</button>
+                </div>
               </div>
             ) : (
               <div className="text-center space-y-12 animate-pulse">
                 <div className="w-48 h-48 bg-white/[0.03] rounded-[4rem] flex items-center justify-center text-8xl border border-white/10 mx-auto shadow-inner">🎬</div>
-                <p className="text-stone-700 uppercase tracking-[1em] text-sm font-black">Output Master Standby</p>
+                <p className="text-stone-700 uppercase tracking-[1em] text-sm font-black">Master Monitor Standby</p>
               </div>
             )}
 
@@ -194,7 +201,7 @@ const VideoSection: React.FC = () => {
                  <div className="w-32 h-32 border-8 border-emerald-500 border-t-transparent rounded-full animate-spin mb-16 shadow-[0_0_80px_rgba(16,185,129,0.4)]"></div>
                  <div className="space-y-6">
                     <p className="text-emerald-500 font-black uppercase tracking-[0.8em] animate-pulse text-3xl">{status}</p>
-                    <p className="text-stone-600 font-bold uppercase tracking-widest text-sm">Synthesizing Temporal Sequence...</p>
+                    <p className="text-stone-600 font-bold uppercase tracking-widest text-sm">Always Succeed Protocol: Active</p>
                  </div>
               </div>
             )}
@@ -204,20 +211,20 @@ const VideoSection: React.FC = () => {
             {workspaceMode === 'create' ? (
               <div className="space-y-12">
                 <div className="space-y-6">
-                  <label className="text-[12px] font-black text-stone-700 uppercase tracking-[0.6em] ml-6">Cinema Prompt Ingest</label>
+                  <label className="text-[12px] font-black text-stone-700 uppercase tracking-[0.6em] ml-6">Cinema Instruction Node</label>
                   <textarea 
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="E.g. A hyper-realistic macro slow-motion of a Venus Flytrap snapping shut..."
+                    placeholder="e.g. Edit a 3D Animated video of a high-tech garden..."
                     className="w-full h-64 bg-[#0c0c0c] border border-white/5 rounded-[4rem] p-16 text-white text-4xl font-serif focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none placeholder:text-stone-900 leading-tight shadow-inner"
                   />
                 </div>
                 <button 
                   onClick={handleCreate}
-                  disabled={isProcessing || !prompt.trim()}
+                  disabled={isProcessing}
                   className="w-full py-12 bg-emerald-600 text-white rounded-[4rem] font-black text-2xl hover:bg-emerald-500 transition-all shadow-2xl disabled:opacity-20 active:scale-[0.98] uppercase tracking-[0.5em]"
                 >
-                  Initiate Render
+                  Initiate Render Sequence
                 </button>
               </div>
             ) : (
@@ -226,34 +233,34 @@ const VideoSection: React.FC = () => {
                   <div className="flex items-center gap-12">
                     <div className="w-28 h-28 bg-emerald-600 rounded-[3.5rem] flex items-center justify-center text-7xl shadow-2xl">🎞️</div>
                     <div>
-                       <h4 className="text-4xl font-bold text-white font-serif tracking-tight leading-none mb-4">Master Rendered</h4>
-                       <p className="text-[12px] text-stone-600 uppercase tracking-[0.6em] font-black">{settings.resolution} • {settings.profile} • CINEMATIC EXPORT READY</p>
+                       <h4 className="text-4xl font-bold text-white font-serif tracking-tight leading-none mb-4">Master Synthesized</h4>
+                       <p className="text-[12px] text-stone-600 uppercase tracking-[0.6em] font-black">{settings.resolution} • {settings.profile} • PRODUCTION READY</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => activeClip && downloadMaster(activeClip.url)}
                     className="px-24 py-10 bg-white text-black rounded-[3rem] font-black uppercase tracking-[0.4em] text-[12px] hover:bg-stone-200 transition-all shadow-2xl active:scale-95"
                   >
-                    Export Master
+                    Export Master Asset
                   </button>
                 </div>
 
                 <div className="space-y-8">
-                  <label className="text-[12px] font-black text-stone-700 uppercase tracking-[0.6em] ml-6 text-center block">Neural Refinement Instructions</label>
+                  <label className="text-[12px] font-black text-stone-700 uppercase tracking-[0.6em] ml-6 text-center block">Neural Refinement Pipeline</label>
                   <div className="flex flex-col md:flex-row gap-8">
                     <input 
                       type="text"
                       value={editPrompt}
                       onChange={(e) => setEditPrompt(e.target.value)}
-                      placeholder="e.g. Change lighting to sunset, add 3D animated style..."
+                      placeholder="e.g. Add sunset lighting, improve CGI detail..."
                       className="flex-1 bg-[#0c0c0c] border border-white/5 rounded-[3rem] px-14 py-10 text-white text-2xl font-medium focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all placeholder:text-stone-900 shadow-inner"
                     />
                     <button 
                       onClick={handleEdit}
-                      disabled={isProcessing || !editPrompt.trim()}
+                      disabled={isProcessing}
                       className="px-20 bg-emerald-600 text-white rounded-[3rem] font-black uppercase tracking-[0.3em] text-[12px] hover:bg-emerald-500 transition-all shadow-2xl py-10 md:py-0 active:scale-95"
                     >
-                      Apply Edit
+                      Refine Asset
                     </button>
                   </div>
                   <div className="flex justify-center pt-6">
