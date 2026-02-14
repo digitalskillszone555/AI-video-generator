@@ -41,8 +41,7 @@ const PlantIdSection: React.FC = () => {
       const result = await identifyPlant(base64Clean);
       setPlantInfo(result);
     } catch (err) {
-      console.error(err);
-      setError("I couldn't identify this plant. Please try a clearer photo.");
+      setError("Analysis failed. Ensure the specimen is centered and well-lit.");
     } finally {
       setLoading(false);
     }
@@ -52,16 +51,13 @@ const PlantIdSection: React.FC = () => {
     try {
       setIsCameraActive(true);
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, 
+        video: { facingMode: 'environment', width: 1280, height: 720 }, 
         audio: false 
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
-      console.error("Error accessing camera:", err);
-      setError("Unable to access camera. Please check permissions.");
+      setError("Lens access denied. Check system permissions.");
       setIsCameraActive(false);
     }
   };
@@ -83,160 +79,133 @@ const PlantIdSection: React.FC = () => {
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        processBase64Image(dataUrl);
+        processBase64Image(canvas.toDataURL('image/jpeg'));
         stopCamera();
       }
     }
   };
 
-  const reset = () => {
-    setImage(null);
-    setPlantInfo(null);
-    setError(null);
-    stopCamera();
-  };
-
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="text-center space-y-3">
-        <h1 className="text-3xl font-bold text-stone-900 font-serif">Identify Your Plant</h1>
-        <p className="text-stone-600">Use our professional AI vision to unlock expert care knowledge.</p>
-      </div>
-
-      {!image && !isCameraActive ? (
-        <div className="space-y-4">
-          <div 
+    <div className="max-w-6xl mx-auto space-y-12">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+        <div className="space-y-2">
+          <h1 className="text-5xl font-bold text-white font-serif tracking-tight">Specimen Analysis</h1>
+          <p className="text-stone-500">Deploy high-precision neural networks to identify and evaluate botanical samples.</p>
+        </div>
+        <div className="flex gap-4">
+          <button 
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-emerald-200 bg-emerald-50 rounded-3xl p-12 flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-100 transition-all group shadow-sm"
+            className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-bold hover:bg-white/10 transition-all flex items-center gap-3"
           >
-            <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            </div>
-            <p className="font-semibold text-emerald-800">Upload Plant Photo</p>
-            <p className="text-emerald-600 text-sm">Drag & drop or click to browse</p>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              accept="image/*" 
-              className="hidden" 
-            />
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="h-px bg-stone-200 flex-1"></div>
-            <span className="text-stone-400 text-xs font-bold uppercase tracking-widest">OR</span>
-            <div className="h-px bg-stone-200 flex-1"></div>
-          </div>
-
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            Ingest File
+          </button>
           <button 
             onClick={startCamera}
-            className="w-full py-5 bg-emerald-600 text-white rounded-3xl font-bold text-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-100"
+            className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-500 transition-all flex items-center gap-3 shadow-xl shadow-emerald-500/20"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            Open Live Camera
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Live Lens
           </button>
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
         </div>
-      ) : isCameraActive ? (
-        <div className="relative rounded-3xl overflow-hidden aspect-square md:aspect-video bg-black shadow-2xl animate-in fade-in zoom-in duration-300">
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6">
-            <button 
-              onClick={stopCamera}
-              className="p-4 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-all"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <button 
-              onClick={capturePhoto}
-              className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all border-4 border-emerald-500"
-            >
-              <div className="w-14 h-14 rounded-full border-2 border-stone-200"></div>
-            </button>
-            <div className="w-14 h-14"></div> {/* Spacer for balance */}
+      </div>
+
+      {isCameraActive ? (
+        <div className="relative rounded-[3rem] overflow-hidden aspect-video bg-black border border-white/10 shadow-2xl">
+          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+          <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none">
+            <div className="w-full h-full border border-emerald-500/50 rounded-2xl flex items-center justify-center">
+              <div className="w-64 h-64 border-2 border-emerald-500 rounded-full opacity-20 animate-pulse"></div>
+            </div>
           </div>
-          <canvas ref={canvasRef} className="hidden" />
+          <div className="absolute bottom-10 left-0 right-0 flex justify-center items-center gap-8">
+            <button onClick={stopCamera} className="p-5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full text-white hover:bg-black/60 transition-all">Cancel</button>
+            <button onClick={capturePhoto} className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all border-[6px] border-white/20">
+               <div className="w-16 h-16 bg-white border-2 border-emerald-500 rounded-full"></div>
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="space-y-4">
-            <div className="relative rounded-3xl overflow-hidden aspect-square bg-stone-100 shadow-lg">
-              <img src={image!} alt="Analyzed plant" className="w-full h-full object-cover" />
+        <div className="grid lg:grid-cols-2 gap-12">
+          {image && (
+            <div className="rounded-[3rem] overflow-hidden bg-stone-100 border border-stone-200 shadow-xl aspect-square relative group">
+              <img src={image} alt="Specimen" className="w-full h-full object-cover" />
               {loading && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white p-6 text-center">
-                  <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-4"></div>
-                  <p className="font-medium">Identifying your leafy friend...</p>
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center space-y-4">
+                  <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-white font-bold text-sm uppercase tracking-widest">Neural Analysis Active</p>
                 </div>
               )}
             </div>
-            <button 
-              onClick={reset}
-              className="w-full py-4 px-6 rounded-2xl border border-stone-200 text-stone-600 font-bold hover:bg-stone-50 transition-colors"
-            >
-              Start New Analysis
-            </button>
-          </div>
+          )}
 
-          <div className="space-y-6">
-            {error && (
-              <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100">
-                {error}
+          {plantInfo && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-4xl font-bold text-white font-serif">{plantInfo.name}</h2>
+                  <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                    plantInfo.care.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                    plantInfo.care.difficulty === 'Moderate' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                    'bg-red-500/10 text-red-400 border-red-500/20'
+                  }`}>
+                    {plantInfo.care.difficulty} Difficulty
+                  </span>
+                </div>
+                <p className="text-emerald-500 font-bold italic font-serif text-xl">{plantInfo.scientificName}</p>
               </div>
-            )}
 
-            {plantInfo && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-4xl font-bold text-stone-900 font-serif">{plantInfo.name}</h2>
-                  <p className="text-emerald-700 italic font-medium">{plantInfo.scientificName}</p>
-                </div>
-                
-                <p className="text-stone-700 leading-relaxed">{plantInfo.description}</p>
+              <p className="text-stone-400 leading-relaxed text-lg">{plantInfo.description}</p>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <InfoCard label="Difficulty" value={plantInfo.care.difficulty} icon="🌱" color="bg-orange-50 text-orange-700" />
-                  <InfoCard label="Sunlight" value={plantInfo.care.sunlight} icon="☀️" color="bg-yellow-50 text-yellow-700" />
-                  <InfoCard label="Watering" value={plantInfo.care.watering} icon="💧" color="bg-blue-50 text-blue-700" />
-                  <InfoCard label="Soil" value={plantInfo.care.soil} icon="🪴" color="bg-stone-50 text-stone-700" />
-                </div>
-
-                <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-100">
-                  <h3 className="font-bold text-emerald-900 mb-3 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-                    Common Issues & Fixes
-                  </h3>
-                  <ul className="space-y-2">
-                    {plantInfo.commonIssues.map((issue, i) => (
-                      <li key={i} className="text-emerald-800 text-sm flex gap-2">
-                        <span className="text-emerald-400">•</span> {issue}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <CareCard icon="💧" label="Hydration" value={plantInfo.care.watering} />
+                <CareCard icon="☀️" label="Sunlight" value={plantInfo.care.sunlight} />
+                <CareCard icon="🌡️" label="Climate" value={plantInfo.care.temperature} />
+                <CareCard icon="🌱" label="Substrate" value={plantInfo.care.soil} />
               </div>
-            )}
-          </div>
+
+              <div className="bg-white/5 rounded-3xl p-6 border border-white/5 space-y-4">
+                <h3 className="font-bold text-stone-300 uppercase tracking-widest text-xs">Diagnostic Warnings</h3>
+                <ul className="space-y-2">
+                  {plantInfo.commonIssues.map((issue, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm text-stone-400">
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                      {issue}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="lg:col-span-2 bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center">
+              <p className="text-red-400 font-bold">{error}</p>
+              <button onClick={() => setError(null)} className="mt-4 text-xs font-bold uppercase text-stone-500 hover:text-white transition-colors">Dismiss Error</button>
+            </div>
+          )}
+
+          {!image && !loading && !error && (
+            <div className="lg:col-span-2 py-32 border-2 border-dashed border-white/5 rounded-[3rem] flex flex-col items-center justify-center space-y-6 text-stone-600">
+              <div className="text-6xl opacity-20">🔬</div>
+              <p className="text-xl font-medium">Ready for Ingestion. Select a file or activate Live Lens.</p>
+            </div>
+          )}
         </div>
       )}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 };
 
-const InfoCard = ({ label, value, icon, color }: { label: string, value: string, icon: string, color: string }) => (
-  <div className={`p-4 rounded-2xl ${color}`}>
-    <div className="text-xl mb-1">{icon}</div>
-    <div className="text-xs font-bold uppercase tracking-wider opacity-70 mb-1">{label}</div>
-    <div className="text-sm font-semibold">{value}</div>
+const CareCard = ({ icon, label, value }: { icon: string, label: string, value: string }) => (
+  <div className="bg-white/5 p-5 rounded-2xl border border-white/5">
+    <div className="flex items-center gap-3 mb-2">
+      <span className="text-xl">{icon}</span>
+      <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">{label}</span>
+    </div>
+    <p className="text-sm font-bold text-white leading-snug">{value}</p>
   </div>
 );
 

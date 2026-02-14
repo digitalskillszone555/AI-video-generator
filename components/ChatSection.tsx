@@ -1,10 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
 import { chatWithBotanist } from '../services/geminiService';
 import { ChatMessage } from '../types';
 
-// Helper functions for audio processing as per guidelines
+// Helper functions for audio processing following SDK standards
 function encode(bytes: Uint8Array) {
   let binary = '';
   const len = bytes.byteLength;
@@ -14,7 +14,7 @@ function encode(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-function createBlob(data: Float32Array): any {
+function createBlob(data: Float32Array): Blob {
   const l = data.length;
   const int16 = new Int16Array(l);
   for (let i = 0; i < l; i++) {
@@ -22,6 +22,7 @@ function createBlob(data: Float32Array): any {
   }
   return {
     data: encode(new Uint8Array(int16.buffer)),
+    // Raw PCM audio at 16000Hz as per Live API requirements
     mimeType: 'audio/pcm;rate=16000',
   };
 }
@@ -45,9 +46,6 @@ const ChatSection: React.FC = () => {
   }, [messages]);
 
   const stopRecording = () => {
-    if (sessionRef.current) {
-      // Logic for session close is internal, we just stop the stream and context
-    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -62,7 +60,8 @@ const ChatSection: React.FC = () => {
   const startRecording = async () => {
     try {
       setIsRecording(true);
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      // Initialize with correct configuration
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       audioContextRef.current = audioContext;
@@ -80,6 +79,7 @@ const ChatSection: React.FC = () => {
             scriptProcessor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
               const pcmBlob = createBlob(inputData);
+              // CRITICAL: Ensure real-time input is only sent after the session is established
               sessionPromise.then(session => {
                 session.sendRealtimeInput({ media: pcmBlob });
               });
@@ -89,6 +89,7 @@ const ChatSection: React.FC = () => {
             scriptProcessor.connect(audioContext.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
+            // Processing user input transcriptions for the chat UI
             if (message.serverContent?.inputTranscription) {
               const text = message.serverContent.inputTranscription.text;
               if (text) {
