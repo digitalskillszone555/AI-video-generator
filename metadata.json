@@ -1,0 +1,9 @@
+{
+  "name": "Sage & Soil: AI Gardening Assistant",
+  "description": "A comprehensive gardening companion that identifies plants from photos, offers expert care advice via an AI chatbot, and generates high-quality gardening tutorial videos using Gemini and Veo.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
