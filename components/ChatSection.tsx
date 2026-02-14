@@ -5,7 +5,7 @@ import { ChatMessage } from '../types';
 
 const ChatSection: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '1', role: 'model', content: "Hello! I'm Sage, your botanical assistant. Ask me anything about your garden, pest control, or specific plant species!" }
+    { id: '1', role: 'model', content: "Hello! I'm Sage, your botanical assistant. Ask me anything about your garden, pest control, or creative botanical cinematography!" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -24,14 +24,17 @@ const ChatSection: React.FC = () => {
     setIsTyping(true);
 
     try {
+      // Map history correctly to prevent model errors
       const history = messages.map(m => ({ 
         role: m.role === 'model' ? 'model' : 'user', 
         parts: [{ text: m.content }] 
       }));
+      
       const reply = await chatWithBotanist(input, history);
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', content: reply }]);
     } catch (err) {
-      setMessages(prev => [...prev, { id: 'err', role: 'model', content: "I'm having trouble connecting to the neural network. Please try again in a moment." }]);
+      console.error(err);
+      setMessages(prev => [...prev, { id: 'err', role: 'model', content: "Neural cluster connection timed out. Please re-send your query." }]);
     } finally {
       setIsTyping(false);
     }
@@ -52,9 +55,9 @@ const ChatSection: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-black/40">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] px-8 py-5 rounded-[2rem] text-lg font-medium leading-relaxed ${
+            <div className={`max-w-[80%] px-8 py-5 rounded-[2rem] text-lg font-medium leading-relaxed shadow-xl ${
               msg.role === 'user' 
-                ? 'bg-emerald-600 text-white rounded-tr-none shadow-xl' 
+                ? 'bg-emerald-600 text-white rounded-tr-none' 
                 : 'bg-white/5 text-stone-200 rounded-tl-none border border-white/5'
             }`}>
               {msg.content}
@@ -80,7 +83,7 @@ const ChatSection: React.FC = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask Sage about your botanical specimens..."
+            placeholder="Type your question for the Assistant..."
             className="flex-1 bg-black border border-white/10 rounded-2xl px-8 py-5 text-white placeholder:text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-lg font-medium shadow-inner"
           />
           <button 
