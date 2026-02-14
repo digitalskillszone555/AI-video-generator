@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, user, onLogout
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   return (
-    <header className="bg-black/60 backdrop-blur-2xl border-b border-white/5 sticky top-0 z-50">
+    <header className="bg-black/80 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-50">
       <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
         <div className="flex items-center gap-4 cursor-pointer" onClick={() => setActiveTab('identify')}>
           <Logo size={42} />
@@ -28,9 +28,9 @@ const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, user, onLogout
         <nav className="hidden xl:flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1">
           <TabButton active={activeTab === 'identify'} onClick={() => setActiveTab('identify')} icon={<ScanIcon />} label="Analysis" />
           <TabButton active={activeTab === 'chat'} onClick={() => setActiveTab('chat')} icon={<ChatIcon />} label="Assistant" />
-          <TabButton active={activeTab === 'weather'} onClick={() => setActiveTab('weather')} icon={<WeatherIcon />} label="Climate" />
-          <TabButton active={activeTab === 'todo'} onClick={() => setActiveTab('todo')} icon={<TodoIcon />} label="Operations" />
-          <TabButton active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<VideoIcon />} label="Studio" />
+          <TabButton active={activeTab === 'weather'} onClick={() => setActiveTab('weather')} icon={<WeatherIcon />} label="Eco Intelligence" />
+          <TabButton active={activeTab === 'todo'} onClick={() => setActiveTab('todo')} icon={<TodoIcon />} label="Task Command" />
+          <TabButton active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<VideoIcon />} label="Studio Hub" />
           {user.isAdmin && <TabButton active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} icon={<AdminIcon />} label="Command" />}
         </nav>
 

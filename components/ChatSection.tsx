@@ -24,19 +24,21 @@ const ChatSection: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const history = messages.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
+      const history = messages.map(m => ({ 
+        role: m.role === 'model' ? 'model' : 'user', 
+        parts: [{ text: m.content }] 
+      }));
       const reply = await chatWithBotanist(input, history);
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', content: reply }]);
     } catch (err) {
-      setMessages(prev => [...prev, { id: 'err', role: 'model', content: "Connection issues. Please try again." }]);
+      setMessages(prev => [...prev, { id: 'err', role: 'model', content: "I'm having trouble connecting to the neural network. Please try again in a moment." }]);
     } finally {
       setIsTyping(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-[75vh] flex flex-col bg-[#050505] rounded-[3rem] border border-white/5 overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.5)]">
-      {/* Header */}
+    <div className="max-w-4xl mx-auto h-[75vh] flex flex-col bg-[#050505] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
       <div className="bg-[#0a0a0a] p-8 border-b border-white/5 flex items-center justify-between">
         <div className="flex items-center gap-5">
           <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg">🌿</div>
@@ -45,14 +47,9 @@ const ChatSection: React.FC = () => {
             <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em]">Botanical Expert Node</p>
           </div>
         </div>
-        <div className="hidden sm:flex gap-2">
-           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-           <span className="text-[9px] font-bold text-stone-600 uppercase tracking-widest">Active Connection</span>
-        </div>
       </div>
 
-      {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto p-8 space-y-8">
+      <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-black/40">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] px-8 py-5 rounded-[2rem] text-lg font-medium leading-relaxed ${
@@ -76,16 +73,15 @@ const ChatSection: React.FC = () => {
         <div ref={scrollRef} />
       </div>
 
-      {/* Input Area - FIX: High contrast for input */}
-      <div className="p-8 bg-black/80 border-t border-white/5">
+      <div className="p-8 bg-[#0a0a0a] border-t border-white/10">
         <div className="relative flex items-center gap-4">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Type your question for Sage..."
-            className="flex-1 bg-[#111] border border-white/10 rounded-2xl px-8 py-5 text-white placeholder:text-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-lg font-medium shadow-inner"
+            placeholder="Ask Sage about your botanical specimens..."
+            className="flex-1 bg-black border border-white/10 rounded-2xl px-8 py-5 text-white placeholder:text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-lg font-medium shadow-inner"
           />
           <button 
             onClick={handleSend}
