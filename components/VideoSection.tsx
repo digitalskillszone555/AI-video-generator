@@ -5,9 +5,9 @@ import { VideoGenerationResult, ProductionSettings, CinematicProfile } from '../
 
 const FX_SUITE: {id: CinematicProfile, name: string, icon: string, prompt: string}[] = [
   { id: 'hdr', name: 'Ultra HDR', icon: '✨', prompt: 'Cinematic 8K, vibrant nature color grade, ultra-sharp detail, HDR peaks.' },
-  { id: 'log-c', name: 'Arri Log-C', icon: '🎥', prompt: 'Arri Alexa Log-C, flat profile, maximum dynamic range, professional shadows.' },
-  { id: 'raw', name: '35mm Film', icon: '🎞️', prompt: '35mm film stock, organic grain, anamorphic flare, cinematic warmth.' },
-  { id: 'standard', name: 'Studio', icon: '🏛️', prompt: 'Clean studio lighting, realistic botanical movement, natural colors.' }
+  { id: 'log-c', name: 'Arri Log-C', icon: '🎥', prompt: 'Arri Alexa Log-C, professional flat profile, high dynamic range.' },
+  { id: 'raw', name: '35mm Film', icon: '🎞️', prompt: 'Classic 35mm film stock, organic grain, anamorphic cinematic warmth.' },
+  { id: 'standard', name: 'Studio', icon: '🏛️', prompt: 'Clean professional studio lighting, realistic botanical movement.' }
 ];
 
 const VideoSection: React.FC = () => {
@@ -46,7 +46,6 @@ const VideoSection: React.FC = () => {
   const handleAuthorize = async () => {
     if (window.aistudio?.openSelectKey) {
       await window.aistudio.openSelectKey();
-      // As per guidelines, assume success after triggering the dialog
       setIsAuthorized(true);
     } else {
       setIsAuthorized(true);
@@ -56,9 +55,15 @@ const VideoSection: React.FC = () => {
   const handleCreate = async () => {
     if (!prompt.trim() || isProcessing) return;
     
+    // Check authorization protocol before initiating render
+    const hasKey = await window.aistudio?.hasSelectedApiKey();
+    if (!hasKey) {
+      await window.aistudio?.openSelectKey();
+    }
+    
     setIsProcessing(true);
     setError(null);
-    setStatus("Booting Cinema Compute...");
+    setStatus("Booting Cinema Compute Cluster...");
     
     try {
       const res = await generateGardeningVideo(prompt, settings, setStatus);
@@ -66,13 +71,15 @@ const VideoSection: React.FC = () => {
       setActiveClip(res);
       setWorkspaceMode('edit');
     } catch (err: any) {
-      console.error("Hub Production Error:", err);
-      if (err.message?.includes("entity was not found")) {
-        setError("Account missing. Please authorize the project using the button above.");
+      console.error("Hub Production Failure:", err);
+      let errorMsg = "Neural Hub Error. The rendering cluster is currently over capacity.";
+      
+      if (err.message?.includes("entity was not found") || err.message?.includes("403")) {
+        errorMsg = "Account Lockage. Please re-authorize the project in the key selector.";
         await window.aistudio?.openSelectKey();
-      } else {
-        setError("Neural Hub Error. The rendering cluster is currently over capacity. Please re-initiate in a moment.");
       }
+      
+      setError(errorMsg);
     } finally {
       setIsProcessing(false);
       setStatus('');
@@ -84,7 +91,7 @@ const VideoSection: React.FC = () => {
     
     setIsProcessing(true);
     setError(null);
-    setStatus("Rendering Master Refinement...");
+    setStatus("Master Refinement in Progress...");
     
     try {
       const res = await extendExistingVideo(activeClip, editPrompt, setStatus);
@@ -92,8 +99,8 @@ const VideoSection: React.FC = () => {
       setActiveClip(res);
       setEditPrompt('');
     } catch (err: any) {
-      console.error("Hub Edit Error:", err);
-      setError("Temporal synthesis failed. Try a simpler refinement prompt.");
+      console.error("Hub Edit Failure:", err);
+      setError("Temporal synthesis failed. The neural sequence could not be extended.");
     } finally {
       setIsProcessing(false);
       setStatus('');
@@ -169,11 +176,11 @@ const VideoSection: React.FC = () => {
             {activeClip ? (
               <video ref={videoRef} src={activeClip.url} className="w-full h-full object-contain" controls autoPlay loop />
             ) : error ? (
-              <div className="text-center space-y-8 p-20">
+              <div className="text-center space-y-8 p-20 animate-in zoom-in-95">
                 <div className="text-8xl">⚠️</div>
-                <h4 className="text-3xl font-bold text-red-500 font-serif">Production Halted</h4>
-                <p className="text-stone-500 text-xl max-w-lg mx-auto">{error}</p>
-                <button onClick={() => {setError(null); setWorkspaceMode('create');}} className="px-12 py-5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest">Reset Render Node</button>
+                <h4 className="text-4xl font-bold text-red-500 font-serif">Production Halted</h4>
+                <p className="text-stone-500 text-2xl max-w-lg mx-auto font-medium">{error}</p>
+                <button onClick={() => {setError(null); setWorkspaceMode('create');}} className="px-12 py-6 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Reset Render Node</button>
               </div>
             ) : (
               <div className="text-center space-y-12 animate-pulse">
@@ -183,7 +190,7 @@ const VideoSection: React.FC = () => {
             )}
 
             {isProcessing && (
-              <div className="absolute inset-0 bg-black/90 backdrop-blur-3xl z-50 flex flex-col items-center justify-center p-24 text-center">
+              <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl z-50 flex flex-col items-center justify-center p-24 text-center animate-in fade-in duration-500">
                  <div className="w-32 h-32 border-8 border-emerald-500 border-t-transparent rounded-full animate-spin mb-16 shadow-[0_0_80px_rgba(16,185,129,0.4)]"></div>
                  <div className="space-y-6">
                     <p className="text-emerald-500 font-black uppercase tracking-[0.8em] animate-pulse text-3xl">{status}</p>
@@ -250,7 +257,7 @@ const VideoSection: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex justify-center pt-6">
-                     <button onClick={() => setWorkspaceMode('create')} className="text-stone-700 hover:text-white uppercase tracking-[0.6em] text-[11px] font-black transition-colors">Initialize New Sequence</button>
+                     <button onClick={() => { setWorkspaceMode('create'); setPrompt(''); }} className="text-stone-700 hover:text-white uppercase tracking-[0.6em] text-[11px] font-black transition-colors">Initialize New Sequence</button>
                   </div>
                 </div>
               </div>

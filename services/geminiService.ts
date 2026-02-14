@@ -9,23 +9,34 @@ const MODEL_VIDEO_FAST = 'veo-3.1-fast-generate-preview';
 const MODEL_IMAGE_EDIT = 'gemini-2.5-flash-image';
 const MODEL_CHAT = 'gemini-3-pro-preview';
 
-// Helper to get a fresh instance of Gemini client
+/**
+ * System Instruction for the Video Production Engine
+ */
+const SYSTEM_INSTRUCTION = `You are an advanced, professional AI Video Production Engine. 
+Your goal is to generate high-quality, professional-grade video output.
+- IF Input is TEXT: Act as a creative director. Apply cinematic lighting, camera angles, and professional motion.
+- IF Input is IMAGE: Act as a motion graphics artist. Animate the subject with 3D camera movements (parallax, zoom, pan).
+- IF Input is VIDEO: Act as a professional video editor. Enhance resolution, color grade, and apply styles like "3D Animated".
+Always default to High Definition aesthetics. Prevent generation failures by using professional artistic logic to fill gaps.`;
+
+// Helper to get a fresh instance of Gemini client to ensure latest API key
 export const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 const getProfileModifiers = (profile: string) => {
   switch(profile) {
-    case 'log-c': return "Arri Alexa Log-C profile, flat cinematic grade, neutral shadows, 14 stops dynamic range.";
-    case 'raw': return "Red Digital Cinema RAW, 8K sensor fidelity, organic film grain, ultra-sharp optics.";
-    case 'hdr': return "HDR10 vibrant peaks, deep contrast, cinematic bloom, high detail botanical master.";
+    case 'log-c': return "Arri Alexa Log-C profile, flat cinematic grade, neutral shadows, high dynamic range.";
+    case 'raw': return "Red Digital Cinema RAW, organic film grain, ultra-sharp optics, professional sensor fidelity.";
+    case 'hdr': return "HDR10 vibrant peaks, deep contrast, cinematic bloom, high-definition botanical master.";
+    case 'standard': return "Clean studio lighting, realistic botanical movement, 35mm film aesthetic, professional grade.";
     default: return "Rec.709 standard, natural daylight, realistic botanical motion.";
   }
 };
 
 /**
  * Enhanced Video Generation from Image + Prompt using Veo models.
- * Ensures the fresh client is used to capture the latest API key.
+ * Routes Image + Video style requests to the correct production pipeline.
  */
 export const generateVideoFromImage = async (
   base64Image: string,
@@ -33,12 +44,15 @@ export const generateVideoFromImage = async (
   onProgress: (status: string) => void
 ): Promise<VideoGenerationResult> => {
   const ai = getGeminiClient();
-  onProgress("Initializing Video Ingestion...");
+  onProgress("Initializing Production Cluster...");
+
+  // Boost the prompt with professional production keywords
+  let enhancedPrompt = `${prompt}. Professional ${prompt.toLowerCase().includes('3d animated') ? '3D animated style, high-end CGI, smooth motion' : 'cinematic botanical motion'}, 4K high-fidelity, polished lighting, realistic camera work.`;
 
   try {
     let operation = await ai.models.generateVideos({
       model: MODEL_VIDEO_FAST,
-      prompt: `Transform this specimen into a cinematic video: ${prompt}. High quality, smooth motion, realistic lighting.`,
+      prompt: enhancedPrompt,
       image: {
         imageBytes: base64Image,
         mimeType: 'image/jpeg'
@@ -51,17 +65,17 @@ export const generateVideoFromImage = async (
     });
 
     while (!operation.done) {
-      onProgress("Rendering Neural Frames...");
+      onProgress("Neural Processing: Frame Synthesis...");
       await new Promise(resolve => setTimeout(resolve, 8000));
       operation = await ai.operations.getVideosOperation({ operation: operation });
     }
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!downloadLink) throw new Error("Output stream empty.");
+    if (!downloadLink) throw new Error("Output Master failed to provide a valid stream.");
     
-    // Fetch video bytes using current API key
+    onProgress("Finalizing Master Render...");
     const res = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-    if (!res.ok) throw new Error(`Fetch error: ${res.status}`);
+    if (!res.ok) throw new Error(`Media Cluster Error: ${res.status}`);
     const blob = await res.blob();
 
     return {
@@ -74,7 +88,8 @@ export const generateVideoFromImage = async (
       timestamp: Date.now()
     };
   } catch (error: any) {
-    if (error.message?.includes("entity was not found")) {
+    console.error("Video Gen Failure:", error);
+    if (error.message?.includes("entity was not found") || error.message?.includes("403")) {
       await window.aistudio?.openSelectKey();
     }
     throw error;
@@ -82,7 +97,7 @@ export const generateVideoFromImage = async (
 };
 
 /**
- * Standard cinematic video generation for Studio Hub.
+ * Studio Hub: Full Video Synthesis from Text or Settings.
  */
 export const generateGardeningVideo = async (
   prompt: string, 
@@ -90,11 +105,11 @@ export const generateGardeningVideo = async (
   onProgress: (status: string) => void
 ): Promise<VideoGenerationResult> => {
   const ai = getGeminiClient();
-  onProgress("Booting Cinema Cluster...");
+  onProgress("Booting Cinema Compute...");
   
   const model = settings.resolution === '1080p' ? MODEL_VIDEO : MODEL_VIDEO_FAST;
   const profileMod = getProfileModifiers(settings.profile);
-  const fullPrompt = `CINEMATIC MASTER: ${prompt}. ${profileMod} Render at ${settings.framerate}fps. High fidelity.`;
+  const fullPrompt = `STRICT STYLE: ${prompt}. ${profileMod} ${prompt.toLowerCase().includes('animated') ? '3D animation quality' : ''}. Professional cinematography, high-fidelity render.`;
 
   try {
     let operation = await ai.models.generateVideos({
@@ -108,16 +123,16 @@ export const generateGardeningVideo = async (
     });
 
     while (!operation.done) {
-      onProgress("Mastering Output Sequence...");
+      onProgress("Mastering Output: " + (Math.random() > 0.5 ? "Enhancing Optics..." : "Sequencing Neural Layers..."));
       await new Promise(resolve => setTimeout(resolve, 10000));
       operation = await ai.operations.getVideosOperation({ operation: operation });
     }
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!downloadLink) throw new Error("Render failed.");
+    if (!downloadLink) throw new Error("Production cluster timed out.");
 
     const res = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-    if (!res.ok) throw new Error(`Media cluster error: ${res.status}`);
+    if (!res.ok) throw new Error(`Fetch protocol failed: ${res.status}`);
     const blob = await res.blob();
     
     return {
@@ -130,23 +145,20 @@ export const generateGardeningVideo = async (
       timestamp: Date.now()
     };
   } catch (error: any) {
-    if (error.message?.includes("entity was not found")) {
+    if (error.message?.includes("entity was not found") || error.message?.includes("403")) {
       await window.aistudio?.openSelectKey();
     }
     throw error;
   }
 };
 
-/**
- * Extend an existing video result.
- */
 export const extendExistingVideo = async (
   previousVideo: VideoGenerationResult,
   prompt: string,
   onProgress: (status: string) => void
 ): Promise<VideoGenerationResult> => {
   const ai = getGeminiClient();
-  onProgress("Extending Cinematic Timeline...");
+  onProgress("Synthesizing Temporal Continuity...");
 
   try {
     let operation = await ai.models.generateVideos({
@@ -161,7 +173,7 @@ export const extendExistingVideo = async (
     });
 
     while (!operation.done) {
-      onProgress("Synthesizing Continuous Motion...");
+      onProgress("Analyzing Motion Vectors...");
       await new Promise(resolve => setTimeout(resolve, 8000));
       operation = await ai.operations.getVideosOperation({ operation: operation });
     }
@@ -187,9 +199,6 @@ export const extendExistingVideo = async (
   }
 };
 
-/**
- * Photo stylization using Gemini 2.5 Flash Image.
- */
 export const editBotanicalPhoto = async (
   base64Image: string,
   editPrompt: string
@@ -201,7 +210,7 @@ export const editBotanicalPhoto = async (
       contents: {
         parts: [
           { inlineData: { data: base64Image, mimeType: 'image/jpeg' } },
-          { text: `PROFESSIONAL EDIT: ${editPrompt}. Maintain specimen identity while applying realistic high-fidelity stylization. Return the modified image.` }
+          { text: `PROFESSIONAL EDIT: ${editPrompt}. Maintenance of specimen identity. Apply cinematic lighting and high-end botanical textures.` }
         ]
       }
     });
@@ -231,7 +240,7 @@ export const identifyPlant = async (base64Image: string): Promise<any> => {
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-        { text: "Detailed botanical analysis. If it is a plant, return care info JSON. If not, set isBotanical false." }
+        { text: "Botanical Analysis: Care instructions JSON. isBotanical: true/false." }
       ],
     },
     config: {
@@ -266,8 +275,8 @@ export const chatWithBotanist = async (message: string, history: any[]): Promise
     model: MODEL_CHAT,
     contents: [...history.slice(-10), { role: 'user', parts: [{ text: message }] }],
     config: {
-      systemInstruction: "You are Sage, Lead Botanical Director at Veridion Studio. Expert in plant physiology and botanical cinematography. Provide technical, expert-grade advice.",
+      systemInstruction: SYSTEM_INSTRUCTION,
     }
   });
-  return response.text || "Neural handshake failed.";
+  return response.text || "Handshake failed.";
 };

@@ -59,43 +59,64 @@ const PlantIdSection: React.FC = () => {
   const handleRefinement = async () => {
     if (!sourceImage || !editPrompt.trim()) return;
     
+    // Check key selection first
+    const hasKey = await window.aistudio?.hasSelectedApiKey();
+    if (!hasKey) {
+      await window.aistudio?.openSelectKey();
+    }
+
     setLoading(true);
     setError(null);
     setGeneratedImage(null);
     setGeneratedVideo(null);
-    setStatus("Initializing production cluster...");
+    setStatus("Syncing with Production Node...");
 
     const isVideoRequest = editPrompt.toLowerCase().includes('video') || 
                            editPrompt.toLowerCase().includes('animated') ||
-                           editPrompt.toLowerCase().includes('movie');
+                           editPrompt.toLowerCase().includes('movie') ||
+                           editPrompt.toLowerCase().includes('render');
 
     try {
       const base64 = sourceImage.split(',')[1];
       
       if (isVideoRequest) {
+        setStatus("Initializing Video Master...");
         const result = await generateVideoFromImage(base64, editPrompt, setStatus);
         setGeneratedVideo(result);
       } else {
-        setStatus("Rendering Stylized Master...");
+        setStatus("Processing Neural Edit...");
         const resultUrl = await editBotanicalPhoto(base64, editPrompt);
         if (resultUrl) {
           setGeneratedImage(resultUrl);
         } else {
-          throw new Error("Neural Engine returned empty stream.");
+          throw new Error("Neural output was empty. Please re-initiate.");
         }
       }
       setEditPrompt('');
     } catch (err: any) {
-      console.error("Neural Error:", err);
-      if (err.message?.includes("entity was not found")) {
-        setError("Account Linkage Error. Please select your project again to authorize the rendering cluster.");
-      } else {
-        setError("Neural Conflict. Ensure your prompt is descriptive and the specimen is clearly visible in the input feed.");
+      console.error("Neural Error Details:", err);
+      let errorMsg = "Neural Conflict. The production node failed to process the request.";
+      
+      if (err.message?.includes("entity was not found") || err.message?.includes("403")) {
+        errorMsg = "Authorization Conflict. Please select your API project to continue production.";
+      } else if (err.message?.includes("payload") || err.message?.includes("large")) {
+        errorMsg = "Payload Latency. The captured image is too large for the current buffer. Try capturing again.";
       }
+      
+      setError(errorMsg);
     } finally {
       setLoading(false);
       setStatus('');
     }
+  };
+
+  const resetState = () => {
+    setError(null);
+    setGeneratedImage(null);
+    setGeneratedVideo(null);
+    setPlantInfo(null);
+    setSourceImage(null);
+    setEditPrompt('');
   };
 
   const downloadResult = () => {
@@ -111,13 +132,13 @@ const PlantIdSection: React.FC = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      // Optimizing to 1080p for reliable AI payload delivery
-      canvas.width = 1920;
-      canvas.height = 1080;
+      // High Fidelity capture optimized for payload reliability
+      canvas.width = 1280;
+      canvas.height = 720;
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
         setSourceImage(dataUrl);
         setGeneratedImage(null);
         setGeneratedVideo(null);
@@ -142,7 +163,7 @@ const PlantIdSection: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_15px_#10b981]"></div>
-             <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em]">Neural Mastering Engine V4.9-PRO</span>
+             <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em]">Neural Mastering Engine V5.0-CINEMA</span>
           </div>
           <h1 className="text-6xl md:text-8xl font-bold text-white font-serif tracking-tighter leading-none">Neural Workbench</h1>
           <p className="text-stone-500 text-2xl font-medium tracking-tight">AI Cinematic Rendering and Technical Botanical Forensics.</p>
@@ -155,7 +176,7 @@ const PlantIdSection: React.FC = () => {
             Ingest Specimen
           </button>
           <button 
-            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
+            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
             className="flex-1 md:flex-none px-12 py-6 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(16,185,129,0.4)]"
           >
             Live Optic
@@ -188,7 +209,7 @@ const PlantIdSection: React.FC = () => {
           <div className="space-y-8 bg-[#0a0a0a] p-10 rounded-[4rem] border border-white/5 shadow-2xl relative">
             <div className="flex items-center justify-between">
                <span className="text-[10px] font-black text-stone-600 uppercase tracking-[0.5em]">Input Feed (A)</span>
-               {sourceImage && <button onClick={() => setSourceImage(null)} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Flush Stream</button>}
+               {sourceImage && <button onClick={() => resetState()} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Flush Stream</button>}
             </div>
             
             <div className="aspect-square bg-black rounded-[3rem] overflow-hidden border border-white/10 relative group">
@@ -248,7 +269,7 @@ const PlantIdSection: React.FC = () => {
                           <video src={generatedVideo.url} className="w-full h-full object-contain" controls autoPlay loop />
                           <div className="absolute top-8 left-8 bg-emerald-600 text-white px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl">Video Master Rendered</div>
                        </div>
-                       <p className="text-stone-500 text-center text-xl font-medium leading-relaxed italic px-10">"Cinema sequence successfully synthesized. Temporal coherence verified."</p>
+                       <p className="text-stone-500 text-center text-xl font-medium leading-relaxed italic px-10">"Cinema sequence synthesized. Style: {generatedVideo.prompt}"</p>
                     </div>
                   )}
 
@@ -287,7 +308,7 @@ const PlantIdSection: React.FC = () => {
                           <h3 className="text-4xl font-bold text-red-500 font-serif">Neural Conflict</h3>
                           <p className="text-stone-400 text-xl font-medium leading-relaxed">{error}</p>
                        </div>
-                       <button onClick={() => {setError(null); setGeneratedImage(null); setGeneratedVideo(null);}} className="text-[11px] font-black uppercase tracking-[0.5em] text-white px-12 py-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all shadow-2xl">Re-initiate Cluster</button>
+                       <button onClick={() => {setError(null); resetState();}} className="text-[11px] font-black uppercase tracking-[0.5em] text-white px-12 py-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all shadow-2xl">Re-initiate Cluster</button>
                     </div>
                   )}
 
