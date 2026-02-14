@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { PlantCareInfo, VideoGenerationResult, ProductionSettings } from "../types";
 
@@ -5,6 +6,7 @@ const MODEL_IDENTIFY = 'gemini-3-flash-preview';
 const MODEL_VIDEO = 'veo-3.1-generate-preview';
 const MODEL_VIDEO_FAST = 'veo-3.1-fast-generate-preview';
 const MODEL_IMAGE_EDIT = 'gemini-2.5-flash-image';
+const MODEL_CHAT = 'gemini-3-pro-preview';
 
 export const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -12,10 +14,10 @@ export const getGeminiClient = () => {
 
 const getProfileModifiers = (profile: string) => {
   switch(profile) {
-    case 'log-c': return "Arri Alexa style, Log-C flat color, high dynamic range, neutral shadows.";
-    case 'raw': return "Red Digital Cinema RAW, 8K sensor feel, cinematic grain, ultra-sharp.";
-    case 'hdr': return "HDR10 metadata, vibrant peaks, deep blacks, high contrast.";
-    default: return "Rec.709 broadcast standard, clean natural lighting.";
+    case 'log-c': return "Arri Alexa Log-C profile, professional flat grade, maximum dynamic range, high fidelity shadows.";
+    case 'raw': return "Red Digital Cinema RAW, 8K sensor fidelity, organic film grain, ultra-sharp optics.";
+    case 'hdr': return "HDR10 color space, vibrant nature peaks, deep contrast, cinematic bloom, high detail.";
+    default: return "Rec.709 industry standard, clean realistic daylight, natural motion.";
   }
 };
 
@@ -25,11 +27,11 @@ export const generateGardeningVideo = async (
   onProgress: (status: string) => void
 ): Promise<VideoGenerationResult> => {
   const ai = getGeminiClient();
-  onProgress("Initializing Production Node...");
+  onProgress("Initializing Production Cluster...");
   
   const model = settings.resolution === '1080p' ? MODEL_VIDEO : MODEL_VIDEO_FAST;
   const profileMod = getProfileModifiers(settings.profile);
-  const fullPrompt = `Cinematic Master: ${prompt}. ${profileMod} ${settings.framerate}fps. High fidelity botanical motion.`;
+  const fullPrompt = `PRO CINEMATOGRAPHY: ${prompt}. ${profileMod} Render at ${settings.framerate}fps. Ensure high fidelity botanical movement and realistic lighting.`;
 
   let operation = await ai.models.generateVideos({
     model: model,
@@ -42,7 +44,7 @@ export const generateGardeningVideo = async (
   });
 
   while (!operation.done) {
-    onProgress("Neural Rendering: Synthesizing Frames...");
+    onProgress("Neural Rendering: Synthesizing High-Fidelity Frames...");
     await new Promise(resolve => setTimeout(resolve, 8000));
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
@@ -72,16 +74,18 @@ export const editBotanicalPhoto = async (
     contents: {
       parts: [
         { inlineData: { data: base64Image, mimeType: 'image/jpeg' } },
-        { text: `PROFESSIONAL EDITING INSTRUCTION: ${editPrompt}. Modify the image as requested while maintaining extreme high fidelity and realistic lighting. Output the edited image.` }
+        { text: `MASTER REFINEMENT INSTRUCTION: ${editPrompt}. Re-render the image with extreme high fidelity, consistent lighting, and the requested stylistic changes. You MUST return the edited image as an inlineData part.` }
       ]
     }
   });
 
   let imageUrl = "";
-  for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData) {
-      imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-      break;
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+        break;
+      }
     }
   }
   return imageUrl;
@@ -93,11 +97,11 @@ export const extendExistingVideo = async (
   onProgress: (status: string) => void
 ): Promise<VideoGenerationResult> => {
   const ai = getGeminiClient();
-  onProgress("Analyzing Master Sequence for Revision...");
+  onProgress("Analyzing Master Temporal Sequence...");
 
   let operation = await ai.models.generateVideos({
     model: MODEL_VIDEO,
-    prompt: `REVISION INSTRUCTION: ${newPrompt}. Apply these changes to the previous clip while maintaining character and environmental consistency.`,
+    prompt: `REVISION: ${newPrompt}. Modify the existing scene while maintaining pixel-perfect environmental consistency and realistic physics.`,
     video: previousResult.rawVideo,
     config: {
       numberOfVideos: 1,
@@ -107,7 +111,7 @@ export const extendExistingVideo = async (
   });
 
   while (!operation.done) {
-    onProgress("Synthesizing Refined Master...");
+    onProgress("Rendering Revision Sequence...");
     await new Promise(resolve => setTimeout(resolve, 8000));
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
@@ -127,14 +131,14 @@ export const extendExistingVideo = async (
   };
 };
 
-export const identifyPlant = async (base64Image: string): Promise<PlantCareInfo & { isBotanical: boolean }> => {
+export const identifyPlant = async (base64Image: string): Promise<any> => {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: MODEL_IDENTIFY,
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-        { text: "Analyze this image. If it is NOT a botanical specimen (plant, leaf, flower, organic growth), set isBotanical to false. If it IS a plant, provide high-detail care instructions." }
+        { text: "Analyze this image. If it is a plant, return detailed JSON care info. If not, set isBotanical to false." }
       ],
     },
     config: {
@@ -156,8 +160,7 @@ export const identifyPlant = async (base64Image: string): Promise<PlantCareInfo 
               difficulty: { type: Type.STRING },
             }
           }
-        },
-        required: ['isBotanical']
+        }
       }
     },
   });
@@ -166,14 +169,12 @@ export const identifyPlant = async (base64Image: string): Promise<PlantCareInfo 
 
 export const chatWithBotanist = async (message: string, history: any[]): Promise<string> => {
   const ai = getGeminiClient();
-  // Ensure we don't send too many messages to prevent context overflow or timeout
-  const recentHistory = history.slice(-10); 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: [...recentHistory, { role: 'user', parts: [{ text: message }] }],
+    model: MODEL_CHAT,
+    contents: [...history, { role: 'user', parts: [{ text: message }] }],
     config: {
-      systemInstruction: "You are Sage, the Lead Botanical Intelligence at Veridion Studio. You are an expert in horticulture, landscape design, and botanical cinematography. Provide concise, professional, and actionable advice.",
+      systemInstruction: "You are Sage, the Lead Intelligence at Veridion Studio. You are a world-class expert in horticulture, landscape design, and botanical cinematography. Provide high-density, professional advice. Be authoritative and precise.",
     }
   });
-  return response.text || "Neural handshake failed. Please re-initiate the session.";
+  return response.text || "Neural handshake failure.";
 };

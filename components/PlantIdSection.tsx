@@ -1,16 +1,16 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { identifyPlant, editBotanicalPhoto } from '../services/geminiService';
 import { PlantCareInfo } from '../types';
 
 const PlantIdSection: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [image, setImage] = useState<string | null>(null);
+  const [sourceImage, setSourceImage] = useState<string | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [plantInfo, setPlantInfo] = useState<PlantCareInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
-  const [isNonBotanical, setIsNonBotanical] = useState(false);
   const [editPrompt, setEditPrompt] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -18,20 +18,20 @@ const PlantIdSection: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    if (image && !plantInfo && !loading && !isEditing && !isNonBotanical) {
-      triggerAnalysis(image);
+    if (sourceImage && !plantInfo && !loading && !generatedImage) {
+      triggerAnalysis(sourceImage);
     }
-  }, [image]);
+  }, [sourceImage]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      setImage(reader.result as string);
+      setSourceImage(reader.result as string);
+      setGeneratedImage(null);
       setPlantInfo(null);
       setError(null);
-      setIsNonBotanical(false);
     };
     reader.readAsDataURL(file);
   };
@@ -40,53 +40,45 @@ const PlantIdSection: React.FC = () => {
     const base64 = imgData.split(',')[1];
     setLoading(true);
     setError(null);
-    setIsNonBotanical(false);
-    
     try {
       const result = await identifyPlant(base64);
-      if (!result || result.isBotanical === false) {
-        setIsNonBotanical(true);
-        setPlantInfo(null);
-      } else {
+      if (result && result.isBotanical !== false) {
         setPlantInfo(result);
       }
     } catch (err: any) {
       console.error(err);
-      setError("AI Analysis Core Exception. Botanical signature not found.");
+      // We don't show hard error here to allow editing non-plant photos
     } finally {
       setLoading(false);
     }
   };
 
   const handleEditPhoto = async () => {
-    if (!image || !editPrompt) return;
-    setIsEditing(true);
+    if (!sourceImage || !editPrompt) return;
     setLoading(true);
+    setError(null);
     try {
-      const base64 = image.split(',')[1];
-      const editedUrl = await editBotanicalPhoto(base64, editPrompt);
-      if (editedUrl) {
-        setImage(editedUrl);
-        // If we edited it, we might want to re-analyze, or just show the edit. 
-        // Let's just show the edit for now as the user requested "editing properly".
-        setPlantInfo(null); 
-        setIsNonBotanical(false);
+      const base64 = sourceImage.split(',')[1];
+      const resultUrl = await editBotanicalPhoto(base64, editPrompt);
+      if (resultUrl) {
+        setGeneratedImage(resultUrl);
+      } else {
+        throw new Error("Neural output stream empty.");
       }
-      setEditPrompt('');
     } catch (err) {
       console.error(err);
-      setError("Neural editing failed. Please check your instructions.");
+      setError("Neural refinement failed. Ensure prompt is descriptive and specimen is clearly visible.");
     } finally {
       setLoading(false);
-      setIsEditing(false);
     }
   };
 
   const downloadResult = () => {
-    if (!image) return;
+    const target = generatedImage || sourceImage;
+    if (!target) return;
     const link = document.createElement('a');
-    link.href = image;
-    link.download = `VERIDION_EDIT_${Date.now()}.png`;
+    link.href = target;
+    link.download = `VERIDION_STUDIO_${Date.now()}.png`;
     link.click();
   };
 
@@ -94,15 +86,17 @@ const PlantIdSection: React.FC = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // High Quality 4K Capture
+      canvas.width = 3840;
+      canvas.height = 2160;
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setImage(canvas.toDataURL('image/jpeg'));
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        setSourceImage(dataUrl);
+        setGeneratedImage(null);
         setPlantInfo(null);
         setError(null);
-        setIsNonBotanical(false);
         stopCamera();
       }
     }
@@ -117,159 +111,160 @@ const PlantIdSection: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-12 pb-24">
-      <div className="flex flex-col md:flex-row justify-between items-end gap-8 border-b border-white/5 pb-10">
-        <div className="space-y-3">
+    <div className="max-w-[1600px] mx-auto space-y-12">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-10 border-b border-white/5 pb-12">
+        <div className="space-y-4">
           <div className="flex items-center gap-3">
-             <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
-             <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.5em]">Neural Analysis Core V4.2</span>
+             <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></div>
+             <span className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em]">Neural Mastering Engine V4.5</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold text-white font-serif tracking-tight leading-none">Specimen Suite</h1>
-          <p className="text-stone-500 text-xl font-medium">Professional botanical telemetry and high-fidelity editing.</p>
+          <h1 className="text-6xl md:text-8xl font-bold text-white font-serif tracking-tighter leading-none">Neural Workbench</h1>
+          <p className="text-stone-500 text-2xl font-medium tracking-tight">AI-driven botanical analysis and high-fidelity cinematography.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="flex-1 md:flex-none px-10 py-5 bg-white/5 border border-white/10 rounded-2xl font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-widest"
+            className="flex-1 md:flex-none px-12 py-6 bg-white/[0.03] border border-white/10 rounded-2xl font-black hover:bg-white/10 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] shadow-2xl"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            Ingest Image
+            Ingest Specimen
           </button>
           <button 
-            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: true }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
-            className="flex-1 md:flex-none px-10 py-5 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-widest shadow-[0_15px_40px_rgba(16,185,129,0.3)]"
+            onClick={() => { setIsCameraActive(true); navigator.mediaDevices.getUserMedia({ video: { width: 3840, height: 2160 } }).then(s => { streamRef.current = s; if(videoRef.current) videoRef.current.srcObject = s; }); }}
+            className="flex-1 md:flex-none px-12 py-6 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(16,185,129,0.4)]"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
-            Live Lens
+            Live Optic
           </button>
           <input type="file" ref={fileInputRef} onChange={handleFile} accept="image/*" className="hidden" />
         </div>
       </div>
 
       {isCameraActive ? (
-        <div className="relative rounded-[4rem] overflow-hidden aspect-video bg-black border-4 border-emerald-500/20 shadow-2xl">
+        <div className="relative rounded-[5rem] overflow-hidden aspect-video bg-black border-4 border-emerald-500/20 shadow-2xl group">
           <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
-             <div className="w-[70%] h-[70%] border border-white/20 rounded-[2rem] relative">
-                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-emerald-500 rounded-tl-3xl"></div>
-                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-emerald-500 rounded-br-3xl"></div>
+          <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none flex items-center justify-center">
+             <div className="w-[60%] h-[60%] border border-white/10 rounded-[4rem] relative">
+                <div className="absolute top-0 left-0 w-20 h-20 border-t-8 border-l-8 border-emerald-500 rounded-tl-[4rem] animate-pulse"></div>
+                <div className="absolute bottom-0 right-0 w-20 h-20 border-b-8 border-r-8 border-emerald-500 rounded-br-[4rem] animate-pulse"></div>
              </div>
           </div>
-          <div className="absolute bottom-12 left-0 right-0 flex justify-center items-center gap-10">
-            <button onClick={stopCamera} className="px-12 py-5 bg-black/80 backdrop-blur-3xl border border-white/10 rounded-full text-white text-[10px] font-extrabold uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all">Abort</button>
-            <button onClick={capture} className="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all">
-               <div className="w-24 h-24 border-4 border-emerald-500 rounded-full flex items-center justify-center">
-                  <div className="w-6 h-6 bg-emerald-500 rounded-full animate-pulse"></div>
+          <div className="absolute bottom-16 left-0 right-0 flex justify-center items-center gap-12">
+            <button onClick={stopCamera} className="px-14 py-6 bg-black/80 backdrop-blur-3xl border border-white/10 rounded-full text-white text-[11px] font-black uppercase tracking-[0.4em] hover:bg-white hover:text-black transition-all shadow-2xl">Cancel</button>
+            <button onClick={capture} className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-90 transition-all duration-300">
+               <div className="w-28 h-28 border-4 border-emerald-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-full animate-ping"></div>
                </div>
             </button>
           </div>
         </div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-20 items-start">
-          <div className="space-y-8">
-            {image ? (
-              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-700">
-                <div className="rounded-[4rem] overflow-hidden bg-[#080808] border border-white/10 shadow-2xl aspect-square relative group">
-                  <img src={image} alt="Specimen" className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-110" />
-                  {loading && <div className="scan-laser"></div>}
-                  {loading && (
-                    <div className="absolute inset-0 bg-black/70 backdrop-blur-xl flex flex-col items-center justify-center z-30">
-                      <div className="w-20 h-20 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-10"></div>
-                      <p className="text-emerald-500 font-bold text-[11px] uppercase tracking-[0.6em] animate-pulse text-center px-10">
-                        {isEditing ? "Neural Editing Engine Active" : "Decoding Organic Signature"}
-                      </p>
-                    </div>
-                  )}
-                  <button onClick={downloadResult} className="absolute top-8 right-8 p-4 bg-black/50 backdrop-blur-xl border border-white/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600 hover:text-white">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  </button>
+        <div className="grid lg:grid-cols-2 gap-10 items-start">
+          {/* LEFT: SOURCE MONITOR */}
+          <div className="space-y-8 bg-[#0a0a0a] p-10 rounded-[4rem] border border-white/5 shadow-2xl">
+            <div className="flex items-center justify-between mb-2">
+               <span className="text-[10px] font-black text-stone-600 uppercase tracking-[0.5em]">Input Monitor (A)</span>
+               {sourceImage && <button onClick={() => setSourceImage(null)} className="text-[9px] font-bold text-red-500 uppercase tracking-widest hover:underline">Clear Feed</button>}
+            </div>
+            
+            <div className="aspect-square bg-black rounded-[3rem] overflow-hidden border border-white/10 relative group">
+              {sourceImage ? (
+                <img src={sourceImage} alt="Input Specimen" className="w-full h-full object-contain" />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-stone-800 space-y-6 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                   <div className="text-8xl opacity-10">📸</div>
+                   <p className="text-[11px] font-black uppercase tracking-[0.8em]">Awaiting Data Feed</p>
                 </div>
+              )}
+              {loading && !generatedImage && <div className="scan-laser"></div>}
+            </div>
 
-                <div className="bg-[#0a0a0a] p-10 rounded-[3rem] border border-white/5 space-y-6 shadow-2xl">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-stone-600 uppercase tracking-widest ml-2">Neural Refinement Prompt</label>
-                    <textarea 
-                      value={editPrompt}
-                      onChange={(e) => setEditPrompt(e.target.value)}
-                      placeholder="E.g. Transform this plant into a 3D animated style, add professional studio lighting..."
-                      className="w-full h-32 bg-black border border-white/10 rounded-2xl px-6 py-5 text-white text-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all resize-none shadow-inner"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleEditPhoto}
-                    disabled={loading || !editPrompt.trim()}
-                    className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[11px] hover:bg-emerald-500 disabled:opacity-20 transition-all shadow-xl active:scale-95"
-                  >
-                    Apply Neural Edit
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="aspect-square border-4 border-dashed border-white/5 rounded-[5rem] flex flex-col items-center justify-center space-y-10 text-stone-900 group hover:border-emerald-500/20 transition-all cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                <div className="text-9xl opacity-10 group-hover:scale-110 transition-transform group-hover:opacity-30">🔬</div>
-                <div className="text-center space-y-4">
-                  <p className="text-4xl font-serif text-stone-600 font-bold tracking-tight">Ingestion Point</p>
-                  <p className="text-[11px] uppercase tracking-[0.6em] font-bold opacity-30">Studio Ready</p>
-                </div>
-              </div>
-            )}
+            <div className="space-y-6">
+               <div className="space-y-3">
+                 <label className="text-[10px] font-black text-stone-700 uppercase tracking-[0.5em] ml-2">Neural Refinement Instructions</label>
+                 <textarea 
+                   value={editPrompt}
+                   onChange={(e) => setEditPrompt(e.target.value)}
+                   placeholder="E.g. Transform this into a high-end 3D animated production style..."
+                   className="w-full h-40 bg-black border border-white/10 rounded-[2rem] p-8 text-white text-lg font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all resize-none shadow-inner placeholder:text-stone-900"
+                 />
+               </div>
+               <button 
+                 onClick={handleEditPhoto}
+                 disabled={loading || !sourceImage || !editPrompt.trim()}
+                 className="w-full py-7 bg-emerald-600 text-white rounded-[2rem] font-black uppercase tracking-[0.4em] text-[12px] hover:bg-emerald-500 disabled:opacity-20 transition-all shadow-xl active:scale-95"
+               >
+                 Apply Neural Edit
+               </button>
+            </div>
           </div>
 
-          <div className="flex flex-col justify-center min-h-[500px]">
-            {plantInfo && !loading && (
-              <div className="space-y-12 animate-in fade-in slide-in-from-right-10 duration-1000">
-                <div className="space-y-6">
-                  <div className="flex flex-wrap items-center gap-6">
-                    <h2 className="text-6xl font-bold text-white font-serif tracking-tight leading-tight">{plantInfo.name}</h2>
-                    <span className={`px-8 py-3 rounded-full text-[11px] font-extrabold uppercase tracking-[0.3em] border ${
-                      plantInfo.care.difficulty.toLowerCase().includes('easy') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                      plantInfo.care.difficulty.toLowerCase().includes('moderate') ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                      'bg-red-500/10 text-red-400 border-red-500/30'
-                    }`}>
-                      {plantInfo.care.difficulty} Protocol
-                    </span>
-                  </div>
-                  <p className="text-emerald-500 font-bold italic font-serif text-3xl tracking-wide">{plantInfo.scientificName}</p>
-                </div>
+          {/* RIGHT: OUTPUT MONITOR */}
+          <div className="space-y-8">
+            <div className="bg-[#0a0a0a] p-10 rounded-[4rem] border border-white/5 shadow-2xl h-full flex flex-col min-h-[800px]">
+               <div className="flex items-center justify-between mb-8">
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.5em]">Output Master (B)</span>
+                  {generatedImage && <button onClick={downloadResult} className="text-[10px] font-black text-white bg-emerald-600 px-6 py-2 rounded-full uppercase tracking-widest hover:bg-emerald-500 transition-all">Export Result</button>}
+               </div>
 
-                <p className="text-stone-400 leading-relaxed text-2xl font-medium border-l-4 border-emerald-500/30 pl-10 italic">"{plantInfo.description}"</p>
+               <div className="flex-1 flex flex-col">
+                  {loading && (
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-12 animate-in fade-in duration-500">
+                       <div className="w-24 h-24 border-8 border-emerald-500 border-t-transparent rounded-full animate-spin shadow-[0_0_50px_rgba(16,185,129,0.3)]"></div>
+                       <div className="text-center space-y-4">
+                          <p className="text-emerald-500 font-black uppercase tracking-[0.8em] animate-pulse">Rendering Neural Master</p>
+                          <p className="text-stone-700 text-xs font-bold uppercase tracking-widest">Applying cinematic refinement protocols...</p>
+                       </div>
+                    </div>
+                  )}
 
-                <div className="grid grid-cols-2 gap-8">
-                  <CareCard icon="💧" label="Hydration" value={plantInfo.care.watering} />
-                  <CareCard icon="☀️" label="Radiation" value={plantInfo.care.sunlight} />
-                  <CareCard icon="🌡️" label="Thermal" value={plantInfo.care.temperature} />
-                  <CareCard icon="🌱" label="Substrate" value={plantInfo.care.soil} />
-                </div>
-              </div>
-            )}
+                  {generatedImage && !loading && (
+                    <div className="flex-1 space-y-10 animate-in zoom-in-95 duration-700">
+                       <div className="aspect-square bg-black rounded-[3rem] overflow-hidden border-2 border-emerald-500/30 shadow-[0_30px_100px_rgba(0,0,0,0.8)] relative group">
+                          <img src={generatedImage} alt="Master Output" className="w-full h-full object-contain" />
+                          <div className="absolute top-8 left-8 bg-emerald-600 text-white px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl">Cinematic Master Generated</div>
+                       </div>
+                       <p className="text-stone-500 text-center text-xl font-medium leading-relaxed italic">"Neural refinement complete. High-fidelity stylistic coherence applied to botanical specimen."</p>
+                    </div>
+                  )}
 
-            {isNonBotanical && !loading && !isEditing && (
-              <div className="bg-[#0a0a0a] border border-white/5 p-16 rounded-[4rem] space-y-10 animate-in zoom-in-95 duration-700 text-center shadow-2xl">
-                <div className="w-24 h-24 bg-amber-500/20 rounded-[2rem] flex items-center justify-center text-5xl mx-auto shadow-inner">⚠️</div>
-                <div className="space-y-4 text-center">
-                  <h3 className="text-3xl font-bold text-amber-400 font-serif">Signature Mismatch</h3>
-                  <p className="text-stone-500 text-xl font-medium leading-relaxed">The Neural Engine identified a non-botanical entity. You can still use the <b>Neural Refinement</b> tool on the left to edit this image into a plant or any creative style.</p>
-                </div>
-              </div>
-            )}
+                  {plantInfo && !generatedImage && !loading && (
+                    <div className="flex-1 space-y-10 animate-in slide-in-from-right-10 duration-1000">
+                       <div className="space-y-6">
+                          <h2 className="text-7xl font-bold text-white font-serif tracking-tighter leading-none">{plantInfo.name}</h2>
+                          <p className="text-emerald-500 font-bold italic font-serif text-3xl tracking-wide">{plantInfo.scientificName}</p>
+                       </div>
+                       <div className="grid grid-cols-2 gap-6">
+                          <ResultCard icon="💧" label="Watering" value={plantInfo.care.watering} />
+                          <ResultCard icon="☀️" label="Sunlight" value={plantInfo.care.sunlight} />
+                          <ResultCard icon="🌡️" label="Climate" value={plantInfo.care.temperature} />
+                          <ResultCard icon="🌱" label="Substrate" value={plantInfo.care.soil} />
+                       </div>
+                       <div className="bg-emerald-600/5 border border-emerald-500/10 p-10 rounded-[2.5rem]">
+                          <p className="text-stone-400 text-xl font-medium leading-relaxed italic">"{plantInfo.description}"</p>
+                       </div>
+                    </div>
+                  )}
 
-            {error && !loading && (
-              <div className="bg-red-500/5 border border-red-500/20 p-16 rounded-[4rem] space-y-10 text-center animate-in zoom-in-95 duration-700">
-                <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center text-5xl mx-auto shadow-2xl">⚠️</div>
-                <div className="space-y-4">
-                  <h3 className="text-3xl font-bold text-red-400 font-serif leading-none">Neural Conflict</h3>
-                  <p className="text-stone-400 text-xl font-medium leading-relaxed">{error}</p>
-                </div>
-                <button onClick={() => {setError(null); setImage(null);}} className="text-[11px] font-black uppercase text-white hover:bg-emerald-600 transition-all tracking-[0.5em] px-12 py-5 border border-white/10 rounded-2xl bg-white/5 shadow-2xl">Restart Cluster</button>
-              </div>
-            )}
+                  {error && !loading && (
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-8 bg-red-500/5 rounded-[3rem] border border-red-500/20 p-12 text-center animate-in zoom-in-95 duration-500">
+                       <div className="text-7xl">⚠️</div>
+                       <div className="space-y-4">
+                          <h3 className="text-3xl font-bold text-red-500 font-serif">Neural Conflict</h3>
+                          <p className="text-stone-400 text-lg font-medium leading-relaxed">{error}</p>
+                       </div>
+                       <button onClick={() => {setError(null); setGeneratedImage(null);}} className="text-[11px] font-black uppercase tracking-[0.4em] text-white px-10 py-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all">Re-initiate Cluster</button>
+                    </div>
+                  )}
 
-            {!loading && !plantInfo && !isNonBotanical && !error && !image && (
-              <div className="text-center space-y-6 opacity-20">
-                <div className="text-9xl">🌿</div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.6em]">Awaiting Botanical Telemetry</p>
-              </div>
-            )}
+                  {!loading && !generatedImage && !plantInfo && !error && (
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-10 opacity-10">
+                       <div className="text-[12rem]">🌿</div>
+                       <p className="text-[11px] font-black uppercase tracking-[1em]">Output Standby</p>
+                    </div>
+                  )}
+               </div>
+            </div>
           </div>
         </div>
       )}
@@ -278,13 +273,13 @@ const PlantIdSection: React.FC = () => {
   );
 };
 
-const CareCard = ({ icon, label, value }: { icon: string, label: string, value: string }) => (
-  <div className="bg-white/[0.03] p-10 rounded-[2.5rem] border border-white/5 hover:bg-white/[0.08] hover:border-emerald-500/30 transition-all duration-700 group shadow-xl">
-    <div className="flex items-center gap-5 mb-5">
-      <span className="text-4xl group-hover:scale-125 transition-transform duration-500">{icon}</span>
-      <span className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.3em]">{label}</span>
+const ResultCard = ({ icon, label, value }: { icon: string, label: string, value: string }) => (
+  <div className="bg-white/[0.03] p-8 rounded-[2rem] border border-white/5 hover:bg-white/[0.08] transition-all group">
+    <div className="flex items-center gap-4 mb-3">
+      <span className="text-3xl grayscale group-hover:grayscale-0 transition-all">{icon}</span>
+      <span className="text-[9px] font-black text-stone-600 uppercase tracking-[0.2em]">{label}</span>
     </div>
-    <p className="text-lg font-bold text-white leading-relaxed tracking-tight">{value}</p>
+    <p className="text-md font-bold text-white tracking-tight">{value}</p>
   </div>
 );
 
