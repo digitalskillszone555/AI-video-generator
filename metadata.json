@@ -1,9 +1,4 @@
 {
   "name": "OMNI-CREATOR ENGINE",
-  "description": "Apex-Unlimited: The world's most powerful all-in-one AI Video Production & Web Development Suite.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone",
-    "geolocation"
-  ]
+  "description": "Apex-Unlimited: The world's most powerful all-in-one AI Video Production & Web Development Suite."
 }
